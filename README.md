@@ -3,15 +3,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent Zero Plugin](https://img.shields.io/badge/Agent%20Zero-Plugin-purple.svg)](https://github.com/agent0ai/a0-plugins)
 
-Connect your [Open Notebook](https://github.com/lfnovo/open-notebook) instance to [Agent Zero](https://github.com/agent0ai/a0) for seamless knowledge management — browse notebooks, manage sources, query with RAG, create notes, generate podcasts, and interact through a right-canvas knowledge panel.
+Connect your [Open Notebook](https://github.com/lfnovo/open-notebook) instance to [Agent Zero](https://github.com/agent0ai/agent-zero) for seamless knowledge management — browse notebooks, manage sources, query with RAG, create notes, generate podcasts, and interact through a right-canvas knowledge panel.
 
 ## Screenshots
 
-<!-- Add screenshots here after initial release -->
-<!--
-![Right Canvas Panel](docs/screenshot-canvas.png)
+### Chat & RAG Queries
+![Chat & RAG Queries](docs/screenshot-chat.png)
+
+### Podcast Generation
+![Podcast Generation](docs/screenshot-podcasts.png)
+
+### Notes
+![Notes](docs/screenshot-notes.png)
+
+### Source Management
 ![Source Management](docs/screenshot-sources.png)
--->
 
 ## Features
 
@@ -26,7 +32,7 @@ Connect your [Open Notebook](https://github.com/lfnovo/open-notebook) instance t
 
 ## Prerequisites
 
-- [Agent Zero](https://github.com/agent0ai/a0) with plugin support
+- [Agent Zero](https://github.com/agent0ai/agent-zero) with plugin support
 - A running [Open Notebook](https://github.com/lfnovo/open-notebook) backend instance
 - Python 3.10+
 - Optional: [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) for tunnel-based remote access
@@ -46,7 +52,7 @@ Connect your [Open Notebook](https://github.com/lfnovo/open-notebook) instance t
 2. Copy the `open_notebook/` directory to your Agent Zero user plugins folder:
 
 ```bash
-cp -r open_notebook/ /path/to/a0/usr/plugins/
+cp -r open_notebook/ /path/to/agent-zero/usr/plugins/
 ```
 
 3. Restart Agent Zero
@@ -207,5 +213,5 @@ This project is licensed under the [MIT License](LICENSE).
 ## Links
 
 - [Open Notebook](https://github.com/lfnovo/open-notebook) — The knowledge management system
-- [Agent Zero](https://github.com/agent0ai/a0) — The AI agent framework
+- [Agent Zero](https://github.com/agent0ai/agent-zero) — The AI agent framework
 - [Plugin Index](https://github.com/agent0ai/a0-plugins) — Browse more Agent Zero plugins

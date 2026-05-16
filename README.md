@@ -1,1 +1,1 @@
-§§include(/a0/usr/plugins/open_notebook/README.md)
+§§include(/tmp/readme_for_github.md)

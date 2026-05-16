@@ -1,0 +1,1 @@
+§§include(/a0/usr/plugins/open_notebook/extensions/webui/right_canvas_register_surfaces/register-open-notebook.js)

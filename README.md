@@ -7,6 +7,9 @@ Connect your [Open Notebook](https://github.com/lfnovo/open-notebook) instance t
 
 ## Screenshots
 
+### Notebook Browser
+![Notebook Browser](docs/screenshot-notebooks.png)
+
 ### Chat & RAG Queries
 ![Chat & RAG Queries](docs/screenshot-chat.png)
 

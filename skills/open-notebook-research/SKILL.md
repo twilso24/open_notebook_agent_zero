@@ -1,0 +1,1 @@
+§§include(/a0/usr/plugins/open_notebook/skills/open-notebook-research/SKILL.md)

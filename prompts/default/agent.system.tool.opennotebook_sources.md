@@ -1,0 +1,1 @@
+§§include(/a0/usr/plugins/open_notebook/prompts/default/agent.system.tool.opennotebook_sources.md)

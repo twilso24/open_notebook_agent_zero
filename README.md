@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent Zero Plugin](https://img.shields.io/badge/Agent%20Zero-Plugin-purple.svg)](https://github.com/agent0ai/a0-plugins)
 
-Connect your [Open Notebook](https://github.com/Open-Notebook) instance to [Agent Zero](https://github.com/agent0ai/a0) for seamless knowledge management — browse notebooks, manage sources, query with RAG, create notes, generate podcasts, and interact through a right-canvas knowledge panel.
+Connect your [Open Notebook](https://github.com/lfnovo/open-notebook) instance to [Agent Zero](https://github.com/agent0ai/a0) for seamless knowledge management — browse notebooks, manage sources, query with RAG, create notes, generate podcasts, and interact through a right-canvas knowledge panel.
 
 ## Screenshots
 
@@ -27,7 +27,7 @@ Connect your [Open Notebook](https://github.com/Open-Notebook) instance to [Agen
 ## Prerequisites
 
 - [Agent Zero](https://github.com/agent0ai/a0) with plugin support
-- A running [Open Notebook](https://github.com/Open-Notebook) backend instance
+- A running [Open Notebook](https://github.com/lfnovo/open-notebook) backend instance
 - Python 3.10+
 - Optional: [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) for tunnel-based remote access
 
@@ -206,6 +206,6 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Links
 
-- [Open Notebook](https://github.com/Open-Notebook) — The knowledge management system
+- [Open Notebook](https://github.com/lfnovo/open-notebook) — The knowledge management system
 - [Agent Zero](https://github.com/agent0ai/a0) — The AI agent framework
 - [Plugin Index](https://github.com/agent0ai/a0-plugins) — Browse more Agent Zero plugins

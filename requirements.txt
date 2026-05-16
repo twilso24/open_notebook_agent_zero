@@ -1,1 +1,1 @@
-§§include(/a0/usr/plugins/open_notebook/requirements.txt)
+httpx>=0.24.0

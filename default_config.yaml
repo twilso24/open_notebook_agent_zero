@@ -1,1 +1,4 @@
-§§include(/a0/usr/plugins/open_notebook/default_config.yaml)
+api_url: "http://host.docker.internal:5055"
+read_only: false
+confirmations: true
+default_ask_model: ""

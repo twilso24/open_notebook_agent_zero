@@ -1,1 +1,25 @@
-§§include(/a0/usr/plugins/open_notebook/plugin.yaml)
+name: open_notebook
+title: Open Notebook
+description: Bridge to Open Notebook personal knowledge management system. Browse notebooks, manage sources, query knowledge, and create notes through conversational AI.
+version: 0.1.0
+settings_sections: [external]
+per_project_config: true
+per_agent_config: false
+always_enabled: false
+
+settings:
+  api_url:
+    type: string
+    default: "http://host.docker.internal:5055"
+    description: "Open Notebook API URL"
+  read_only:
+    type: boolean
+    default: false
+  confirmations:
+    type: boolean
+    default: true
+    description: "When true, ask for confirmation before destructive operations"
+  default_ask_model:
+    type: string
+    default: ""
+    description: "Default model name for ask/RAG operations. Leave empty for auto-select. Supports fuzzy matching (e.g. 'deepseek', 'gemini-2.5-flash')."

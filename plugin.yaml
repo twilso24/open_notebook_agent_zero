@@ -1,11 +1,10 @@
-name: open_notebook
+name: open-notebook
 title: Open Notebook
 description: Bridge to Open Notebook personal knowledge management system. Browse notebooks, manage sources, query knowledge, and create notes through conversational AI.
 version: 0.1.0
-settings_sections: [external]
 per_project_config: true
 per_agent_config: false
-always_enabled: false
+always_enabled: true
 
 settings:
   api_url:

@@ -1,4 +1,4 @@
-name: open-notebook
+name: open_notebook
 title: Open Notebook
 description: Bridge to Open Notebook personal knowledge management system. Browse notebooks, manage sources, query knowledge, and create notes through conversational AI.
 version: 0.1.0
@@ -21,4 +21,4 @@ settings:
   default_ask_model:
     type: string
     default: ""
-    description: "Default model name for ask/RAG operations. Leave empty for auto-select. Supports fuzzy matching (e.g. 'deepseek', 'gemini-2.5-flash')."
+    description: "Default model name for ask/RAG operations. Leave empty for auto-select. Supports fuzzy matching (e.g. \"deepseek\", \"gemini-2.5-flash\")."

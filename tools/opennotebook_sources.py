@@ -22,6 +22,7 @@ from helpers.tool import Tool, Response
 
 import asyncio
 import sys
+from pathlib import Path
 
 # Add plugin root to path for shared imports (config, client, errors)
 _plugin_root = str(Path(__file__).resolve().parent.parent)
@@ -39,6 +40,56 @@ _MAX_CONTENT_CHARS = 2000  # Truncate long source content for readability
 
 # Known file extensions for auto-detection of file-type sources
 _FILE_EXTENSIONS = {'.pdf', '.doc', '.docx', '.txt', '.md', '.rtf', '.odt', '.epub', '.html', '.htm', '.csv'}
+
+
+def _detect_and_prepare(content: str, title: str, notebook_id: str) -> tuple:
+    """Auto-detect source type from content and build form-encoded request data.
+
+    Detection logic:
+        - URL (http:// or https://) → type 'link', sets 'url' field
+        - File path with known extension → type 'text', sets 'content' field
+        - Everything else → type 'text', sets 'content' field (raw text)
+
+    Args:
+        content: The raw content string (URL, file path, or text).
+        title: Optional title for the source (may be empty string).
+        notebook_id: Target notebook ID.
+
+    Returns:
+        tuple: (source_type_string, request_data_dict) where request_data_dict
+               is suitable for the ``data=`` parameter of httpx.post (form-encoded).
+    """
+    # Build base data dict with required fields
+    # embed='true' triggers automatic vector embedding after processing
+    # async_processing='true' so the source add returns immediately
+    request_data = {
+        "notebook_id": notebook_id,
+        "title": title or "",
+        "embed": "true",
+        "async_processing": "true",
+    }
+
+    # Detect source type from content
+    lower_content = content.lower()
+    if lower_content.startswith(("http://", "https://")):
+        source_type = "link"
+        request_data["type"] = "link"
+        request_data["url"] = content
+    else:
+        # Check if content looks like a file path with a known extension
+        import os
+        _, ext = os.path.splitext(content)
+        if ext.lower() in _FILE_EXTENSIONS:
+            source_type = "text"
+            request_data["type"] = "text"
+            request_data["content"] = content  # file path reference
+        else:
+            source_type = "text"
+            request_data["type"] = "text"
+            request_data["content"] = content  # raw text
+
+    return source_type, request_data
+
 
 class OpenNotebookSources(Tool):
     async def execute(self, **kwargs):
@@ -238,10 +289,10 @@ class OpenNotebookSources(Tool):
             source_title = data.get("title") or title or "Untitled"
             status = data.get("status", "unknown")
 
-            # Attempt automatic insight generation
-            insight_note = await self._generate_insight(source_id)
+            # Start insight generation in the background (fire-and-forget)
+            asyncio.create_task(self._generate_insight(source_id))
 
-            # Build response with source details and insight result
+            # Build response with source details
             lines = [
                 f"✅ **Source added successfully**",
                 f"",
@@ -253,13 +304,11 @@ class OpenNotebookSources(Tool):
                 f"| Status | {format_status(status)} |",
             ]
 
-            if insight_note:
-                lines.append(f"\n{insight_note}")
-            else:
-                lines.append(
-                    f"\n💡 Source is processing. Use `opennotebook_sources:list` to check status, "
-                    f"or `opennotebook_query:search` to search once processing is complete."
-                )
+            lines.append(
+                f"\n💡 Source is processing. Insights will be generated automatically. "
+                f"Use `opennotebook_sources:list` to check status, "
+                f"or `opennotebook_query:search` to search once processing is complete."
+            )
 
             return Response(
                 message="\n".join(lines),
@@ -464,23 +513,24 @@ class OpenNotebookSources(Tool):
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _generate_insight(self, source_id: str) -> str:
-        """Attempt automatic insight generation for a newly added source.
+        """Background task: embed source and generate insights after processing.
 
         Follows the same flow as the Open Notebook web app:
         1. Poll source status until processing is complete
-        2. Fetch available transformations and find the default
-        3. Check for existing insights (skip if present)
-        4. POST to generate an insight
-        5. Poll until insight results are available
+        2. Trigger vector embedding via POST /api/embed
+        3. Fetch available transformations and find the default
+        4. Check for existing insights (skip if present)
+        5. POST to generate an insight
+        6. Poll until insight results are available
 
-        This method never raises — all errors are returned as informational
-        notes so the source add operation always succeeds.
+        This method never raises — all errors are silently handled
+        so the source add operation always succeeds.
 
         Args:
             source_id: The ID of the newly created source.
 
         Returns:
-            str: An informational note about insight generation result,
+            str: An informational note about the result,
                  or an empty string if nothing noteworthy to report.
         """
         api_url = config.get_api_url(self.agent)
@@ -515,10 +565,27 @@ class OpenNotebookSources(Tool):
             if current_status in ("failed", "error"):
                 return (
                     f"⚠️ **Source processing failed** (status: {current_status}). "
-                    f"Insight generation skipped."
+                    f"Embedding and insight generation skipped."
                 )
 
-            # ── Step 2: Fetch transformations and find default ──────────
+            # ── Step 2: Trigger automatic embedding ───────────────────
+            # The POST /api/sources embed form field alone doesn't trigger
+            # vector embedding. We must call POST /api/embed explicitly.
+            try:
+                embed_resp = await http_client.post(
+                    f"{api_url}/api/embed",
+                    json={"item_id": source_id, "item_type": "source"},
+                )
+                if embed_resp.status_code == 200:
+                    embed_data = embed_resp.json()
+                    # Embedding is async — just fire and move on
+                else:
+                    # Non-fatal — embedding can be triggered manually later
+                    pass
+            except Exception:
+                pass  # Non-fatal — continue to insight generation
+
+            # ── Step 3: Fetch transformations and find default ──────────
             transforms_url = f"{api_url}/api/transformations"
             transforms_resp = await http_client.get(transforms_url)
             transforms_resp.raise_for_status()

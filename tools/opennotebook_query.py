@@ -53,11 +53,10 @@ class OpenNotebookQuery(Tool):
         method = self.method or "search"
 
         if method == "search":
-            # Search sources and notes by keyword or vector similarity
-            notebook_id = kwargs.get("notebook_id", "")
+            # Search is global across all notebooks (API does not support notebook-scoped search)
             query = kwargs.get("query", "")
             search_type = kwargs.get("search_type", "text")
-            return await self._search(notebook_id, query, search_type)
+            return await self._search(query, search_type)
         elif method == "ask":
             # RAG-powered question answering over notebook content
             notebook_id = kwargs.get("notebook_id", "")
@@ -79,11 +78,13 @@ class OpenNotebookQuery(Tool):
                 break_loop=False,
             )
 
-    async def _search(self, notebook_id: str, query: str, search_type: str) -> Response:
+    async def _search(self, query: str, search_type: str) -> Response:
         """Search sources and notes with keyword or semantic (vector) search.
 
+        Note: Search is global across all notebooks — the API does not support
+        notebook-scoped search.
+
         Args:
-            notebook_id: Optional notebook to scope the search to.
             query: The search keywords or natural language phrase.
             search_type: 'text' for keyword matching, 'vector' for semantic search.
 
@@ -165,10 +166,6 @@ class OpenNotebookQuery(Tool):
                     f"Refine your search query or use `opennotebook_query:ask` for a focused answer."
                 )
 
-            # Show notebook scope if provided
-            if notebook_id:
-                lines.insert(1, f"*Notebook: `{notebook_id}`*\n")
-
             return Response(
                 message="\n".join(lines),
                 break_loop=False,
@@ -184,7 +181,8 @@ class OpenNotebookQuery(Tool):
         and uses an LLM to synthesize a grounded answer.
 
         Args:
-            notebook_id: Optional notebook to scope the answer to.
+            notebook_id: Accepted for future API compatibility but currently unused —
+                         ask is global across all notebooks.
             question: The natural language question to answer.
             model_name: Optional model hint (partial name or provider) for answer generation.
 
@@ -277,7 +275,7 @@ class OpenNotebookQuery(Tool):
             if models.get("display_name"):
                 lines.insert(1, f"*Model: {models['display_name']}*\n")
             if notebook_id:
-                lines.insert(1, f"*Notebook: `{notebook_id}`*\n")
+                lines.insert(1, f"*Note: Ask is global across all notebooks (notebook scope is not yet supported by the API).*\n")
             lines.append(answer)
 
             return Response(
@@ -345,6 +343,14 @@ class OpenNotebookQuery(Tool):
             source_response.raise_for_status()
             sources = source_response.json()
 
+            # Also fetch notes in this notebook for fuzzy matching
+            notes_url = f"{api_url}/api/notes"
+            note_response = await http_client.get(
+                notes_url, params={"notebook_id": notebook_id}
+            )
+            note_response.raise_for_status()
+            notes = note_response.json()
+
             # Filter by name similarity — case-insensitive substring matching
             name_lower = name.lower()
             matches = []
@@ -357,6 +363,17 @@ class OpenNotebookQuery(Tool):
                         "name": src.get("title") or "Untitled",
                         "id": src.get("id", ""),
                         "status": src.get("status", ""),
+                    })
+
+            # Also match notes by name
+            for note in notes:
+                note_title = (note.get("title") or note.get("name") or "").lower()
+                if name_lower in note_title or note_title in name_lower:
+                    matches.append({
+                        "type": "note",
+                        "name": note.get("title") or note.get("name") or "Untitled",
+                        "id": note.get("id", ""),
+                        "status": note.get("status", ""),
                     })
 
             # Handle no matches — suggest broader search alternatives

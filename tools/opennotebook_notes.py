@@ -25,10 +25,14 @@ from pathlib import Path
 _plugin_root = str(Path(__file__).resolve().parent.parent)
 if _plugin_root not in sys.path:
     sys.path.insert(0, _plugin_root)
+_tools_dir = str(Path(__file__).resolve().parent)
+if _tools_dir not in sys.path:
+    sys.path.insert(0, _tools_dir)
 
 import config
 import client
 import errors
+sys.modules.pop('shared', None)
 from shared import format_date, format_status, get_asset_type, handle_error
 
 # Limits for display — prevents overwhelming output
@@ -44,15 +48,29 @@ class OpenNotebookNotes(Tool):
         Returns:
             Response: The result from the delegated method handler.
         """
-        method = self.method or "list"
+        method = kwargs.get("action") or self.method or "list"
 
         if method == "list":
             # List all notes in a notebook — requires notebook_id
-            notebook_id = kwargs.get("notebook_id", "")
+            notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
+            if notebook_id:
+                try:
+                    sys.modules.pop('shared', None)
+                    from shared import resolve_notebook_id
+                    notebook_id = await resolve_notebook_id(self.agent, notebook_id)
+                except ValueError as e:
+                    return Response(message=f"❌ **{e}**", break_loop=False)
             return await self._list(notebook_id)
         elif method == "create":
             # Create a new note — requires notebook_id, content, optional title
-            notebook_id = kwargs.get("notebook_id", "")
+            notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
+            if notebook_id:
+                try:
+                    sys.modules.pop('shared', None)
+                    from shared import resolve_notebook_id
+                    notebook_id = await resolve_notebook_id(self.agent, notebook_id)
+                except ValueError as e:
+                    return Response(message=f"❌ **{e}**", break_loop=False)
             title = kwargs.get("title", "")
             content = kwargs.get("content", "")
             return await self._create(notebook_id, title, content)
@@ -141,7 +159,7 @@ class OpenNotebookNotes(Tool):
                 remaining = total - _MAX_NOTES
                 lines.append(
                     f"\n...and {remaining} more notes. "
-                    f"Use `opennotebook_query:search` to find specific notes."
+                    f"Use `opennotebook_query:find` to locate specific items by name."
                 )
 
             return Response(

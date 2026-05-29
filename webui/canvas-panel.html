@@ -1,7 +1,10 @@
 <html>
 <head>
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+  </style>
   <script type="module">
-    import { store } from "/plugins/open_notebook/webui/open-notebook-store.js";
+    import { store } from "/plugins/open-notebook/webui/open-notebook-store.js";
   </script>
 </head>
 <body>
@@ -43,58 +46,6 @@
          NOTEBOOK LIST (Homepage)
          ============================================================ -->
     <div x-show="!&#36;store.openNotebookStore?.hasNotebookSelected" class="on-scroll">
-
-        <!-- Global Search Bar -->
-        <div class="on-query-bar" style="margin:8px">
-            <div style="display:flex;gap:6px">
-                <input type="text" class="on-query-bar__input"
-                       placeholder="Search all notebooks…"
-                       :value="&#36;store.openNotebookStore?.globalSearchText || ''"
-                       @input="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.globalSearchText = &#36;event.target.value)"
-                       @keydown.enter="&#36;store.openNotebookStore?.submitGlobalSearch()">
-                <button class="on-btn on-btn--primary" @click="&#36;store.openNotebookStore?.submitGlobalSearch()"
-                        :disabled="&#36;store.openNotebookStore?.globalSearchLoading">
-                    <span x-show="!&#36;store.openNotebookStore?.globalSearchLoading">🔍</span>
-                    <span x-show="&#36;store.openNotebookStore?.globalSearchLoading" class="on-spinner" style="width:16px;height:16px;border-width:2px"></span>
-                </button>
-                <button x-show="&#36;store.openNotebookStore?.globalSearchResult" class="on-btn on-btn--ghost" @click="&#36;store.openNotebookStore?.clearGlobalSearch()">✕</button>
-            </div>
-        </div>
-
-        <!-- Global Search Results -->
-        <div x-show="&#36;store.openNotebookStore?.globalSearchResult" x-transition style="display:none;margin:8px">
-            <div class="on-section-header">Search Results</div>
-            <div x-show="&#36;store.openNotebookStore?.globalSearchResult?.sources?.length">
-                <div style="font-size:0.8em;color:var(--color-text-muted);margin:4px 0">Sources</div>
-                <template x-for="src in (&#36;store.openNotebookStore?.globalSearchResult?.sources || [])" :key="src.id">
-                    <div class="on-card" style="margin-bottom:6px">
-                        <div class="on-card__title" x-text="src.title || src.name || 'Untitled'"></div>
-                        <div class="on-card__meta" x-text="(src.content || src.text || '').substring(0, 120) + '…'" style="margin-top:2px"></div>
-                        <div x-show="src.score" class="on-citation__score" style="margin-top:4px">
-                            <div class="on-citation__score-fill" :style="'width:' + Math.round((src.score || 0) * 100) + '%'"></div>
-                            <span x-text="Math.round((src.score || 0) * 100) + '%'" style="font-size:0.75em;margin-left:4px"></span>
-                        </div>
-                        <button class="on-btn on-btn--ghost" style="margin-top:4px;font-size:0.8em"
-                                @click="&#36;store.openNotebookStore?.sendToChat(src.title || src.name, [src])">→ Chat</button>
-                    </div>
-                </template>
-            </div>
-            <div x-show="&#36;store.openNotebookStore?.globalSearchResult?.notes?.length">
-                <div style="font-size:0.8em;color:var(--color-text-muted);margin:4px 0">Notes</div>
-                <template x-for="note in (&#36;store.openNotebookStore?.globalSearchResult?.notes || [])" :key="note.id">
-                    <div class="on-card" style="margin-bottom:6px">
-                        <div class="on-card__title" x-text="note.title || 'Untitled'"></div>
-                        <div class="on-card__meta" x-text="(note.content || '').substring(0, 120) + '…'" style="margin-top:2px"></div>
-                        <div x-show="note.score" class="on-citation__score" style="margin-top:4px">
-                            <div class="on-citation__score-fill" :style="'width:' + Math.round((note.score || 0) * 100) + '%'"></div>
-                            <span x-text="Math.round((note.score || 0) * 100) + '%'" style="font-size:0.75em;margin-left:4px"></span>
-                        </div>
-                        <button class="on-btn on-btn--ghost" style="margin-top:4px;font-size:0.8em"
-                                @click="&#36;store.openNotebookStore?.sendToChat(note.title, [note])">→ Chat</button>
-                    </div>
-                </template>
-            </div>
-        </div>
 
         <!-- Create Notebook -->
         <div style="margin:8px">
@@ -146,7 +97,7 @@
     <!-- ============================================================
          SELECTED NOTEBOOK DETAIL
          ============================================================ -->
-    <div x-show="&#36;store.openNotebookStore?.hasNotebookSelected" class="on-notebook-detail" style="flex:1;overflow:hidden">
+    <div x-show="&#36;store.openNotebookStore?.hasNotebookSelected" class="on-notebook-detail" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
 
         <!-- Tab Navigation -->
         <div class="on-tabs">
@@ -159,7 +110,7 @@
         </div>
 
         <!-- ═══════ SOURCES TAB ═══════ -->
-        <div x-show="&#36;store.openNotebookStore?.activeTab === 'sources'" class="on-scroll on-tab-pane--sources" style="display:none">
+        <div x-show="&#36;store.openNotebookStore?.activeTab === 'sources'" class="on-scroll on-tab-pane--sources" style="display:none;flex:1;min-height:0">
 
             <!-- Transformation Selector -->
             <div x-show="&#36;store.openNotebookStore?.transformations?.length" style="padding:8px 12px">
@@ -308,8 +259,6 @@
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.getSourceInsights(source.id); &#36;store.openNotebookStore._activeMenuId = null">💡 Insights</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.findRelated(source); &#36;store.openNotebookStore._activeMenuId = null">🔗 Related</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.sendSourceToChat(source.id); &#36;store.openNotebookStore._activeMenuId = null">→ A0 Chat</button>
-                            <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.getSourceStatus(source.id); &#36;store.openNotebookStore._activeMenuId = null">❓ Status</button>
-                            <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.retrySource(source.id); &#36;store.openNotebookStore._activeMenuId = null">🔄 Retry</button>
                             <button class="on-context-menu__item on-context-menu__item--danger" @click="if(confirm('Delete this source?')){&#36;store.openNotebookStore?.deleteSource(source.id)}; &#36;store.openNotebookStore._activeMenuId = null">🗑️ Delete</button>
                         </div>
                     </div>
@@ -321,7 +270,7 @@
         </div>
 
         <!-- ═══════ NOTES TAB ═══════ -->
-        <div x-show="&#36;store.openNotebookStore?.activeTab === 'notes'" class="on-scroll on-tab-pane--notes" style="display:none">
+        <div x-show="&#36;store.openNotebookStore?.activeTab === 'notes'" class="on-scroll on-tab-pane--notes" style="display:none;flex:1;min-height:0">
 
             <!-- Quick Journal Form -->
             <div class="on-journal" style="padding:12px">
@@ -373,7 +322,7 @@
         </div>
 
         <!-- ═══════ PODCASTS TAB ═══════ -->
-        <div x-show="&#36;store.openNotebookStore?.activeTab === 'podcasts'" class="on-scroll on-tab-pane--podcasts" style="display:none">
+        <div x-show="&#36;store.openNotebookStore?.activeTab === 'podcasts'" class="on-scroll on-tab-pane--podcasts" style="display:none;flex:1;min-height:0">
 
             <!-- Generate Button -->
             <div style="padding:8px 12px">
@@ -459,7 +408,7 @@
         </div>
 
         <!-- ═══════ CHAT TAB ═══════ -->
-        <div x-show="&#36;store.openNotebookStore?.activeTab === 'chat'" class="on-tab-pane--chat" style="display:none;flex:1;display:flex;flex-direction:column;overflow:hidden">
+        <div x-show="&#36;store.openNotebookStore?.activeTab === 'chat'" class="on-tab-pane--chat" style="flex:1;min-height:0;overflow:hidden">
 
             <!-- Session Selector -->
             <div x-show="&#36;store.openNotebookStore?.chatSessions?.length > 0 && !&#36;store.openNotebookStore?.chatSessionId" style="padding:8px 12px;flex:1;overflow-y:auto">
@@ -486,7 +435,7 @@
             </div>
 
             <!-- Active Chat View -->
-            <div x-show="&#36;store.openNotebookStore?.chatSessionId || !&#36;store.openNotebookStore?.chatSessions?.length" style="display:none;flex:1;display:flex;flex-direction:column;overflow:hidden">
+            <div x-show="&#36;store.openNotebookStore?.chatSessionId || !&#36;store.openNotebookStore?.chatSessions?.length" style="flex:1;overflow:hidden" class="on-chat-active-view">
                 <!-- Back to sessions -->
                 <div x-show="&#36;store.openNotebookStore?.chatSessionId && &#36;store.openNotebookStore?.chatSessions?.length > 1" style="padding:4px 8px;border-bottom:1px solid var(--color-border)">
                     <button class="on-btn on-btn--ghost" style="font-size:0.8em" @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.chatSessionId = null, &#36;store.openNotebookStore.chatMessages = [])">

@@ -26,7 +26,7 @@ manage research sources in Open Notebook notebooks
 - User says "show me what's in this source" → use `read`
 - User says "remove/delete this source" → use `delete`
 
-**Important:** Sources need processing time after being added before they appear in search results.
+**Important:** Sources need processing time after being added. Use `opennotebook_sources:list` to check processing status.
 
 usage:
 ~~~json

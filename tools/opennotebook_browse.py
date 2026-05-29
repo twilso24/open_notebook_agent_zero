@@ -19,10 +19,14 @@ from pathlib import Path
 _plugin_root = str(Path(__file__).resolve().parent.parent)
 if _plugin_root not in sys.path:
     sys.path.insert(0, _plugin_root)
+_tools_dir = str(Path(__file__).resolve().parent)
+if _tools_dir not in sys.path:
+    sys.path.insert(0, _tools_dir)
 
 import config
 import client
 import errors
+sys.modules.pop('shared', None)
 from shared import format_date, format_status, get_asset_type, handle_error
 
 # Limits
@@ -32,7 +36,7 @@ _MAX_TREE_ITEMS = 50  # Threshold for compact vs full tree view
 class OpenNotebookBrowse(Tool):
     async def execute(self, **kwargs):
         """Route to the requested browse method."""
-        method = self.method or "notebooks"
+        method = kwargs.get("action") or self.method or "notebooks"
 
         if method == "notebooks":
             return await self._notebooks()
@@ -82,16 +86,20 @@ class OpenNotebookBrowse(Tool):
 
             # Build markdown table of notebooks
             lines = ["📂 **Notebooks**\n"]
-            lines.append("| Name | Sources | Notes | Updated |")
-            lines.append("|------|---------|-------|---------|")
+            lines.append("| ID | Name | Sources | Notes | Updated |")
+            lines.append("|----|------|---------|-------|---------|")
 
             total = len(notebooks)
             for nb in notebooks[:_MAX_NOTEBOOKS]:
                 name = nb.get("name", "Untitled")
+                nb_id = nb.get('id', '')
+                short_id = nb_id.split(':')[-1][-8:] if nb_id else 'N/A'
                 source_count = nb.get("source_count", 0)
                 note_count = nb.get("note_count", 0)
                 updated = format_date(nb.get("updated", ""))
-                lines.append(f"| **{name}** | {source_count} | {note_count} | {updated} |")
+                lines.append(f"| `{short_id}` | **{name}** | {source_count} | {note_count} | {updated} |")
+
+            lines.append("\n💡 Use the full notebook ID with `opennotebook_sources:list` or `opennotebook_sources:add`.")
 
             # Indicate if results were truncated
             if total > _MAX_NOTEBOOKS:
@@ -122,6 +130,34 @@ class OpenNotebookBrowse(Tool):
                 ),
                 break_loop=False,
             )
+
+        # Name-based lookup: if the value doesn't look like an ID, search by name
+        if not notebook_id.startswith("notebook:"):
+            try:
+                api_url = config.get_api_url(self.agent)
+                list_url = f"{api_url}/api/notebooks"
+                http_client = await client.get_client()
+                list_response = await http_client.get(list_url)
+                list_response.raise_for_status()
+                all_notebooks = list_response.json()
+                # Case-insensitive substring match on name (strip emoji)
+                import re
+                search_term = notebook_id.lower()
+                for nb in all_notebooks:
+                    clean_name = re.sub(r'[\U00010000-\U0010ffff]', '', nb.get('name', '')).strip().lower()
+                    if search_term in clean_name or clean_name in search_term:
+                        notebook_id = nb.get('id', '')
+                        break
+                else:
+                    return Response(
+                        message=(
+                            f"❌ **No notebook found matching '{notebook_id}'.**\n"
+                            "Use `opennotebook_browse:notebooks` to see all available notebooks."
+                        ),
+                        break_loop=False,
+                    )
+            except Exception as e:
+                return Response(message=handle_error(e, list_url), break_loop=False)
 
         api_url = config.get_api_url(self.agent)
         url = f"{api_url}/api/notebooks/{notebook_id}"

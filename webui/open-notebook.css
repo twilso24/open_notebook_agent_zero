@@ -55,8 +55,24 @@
 /* --- Scrollable Content Area --- */
 .on-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* --- Canvas Content Container --- */
+.on-canvas-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* --- Notebook Detail Container --- */
+.on-notebook-detail {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 /* --- Top Bar --- */
@@ -768,6 +784,16 @@
 }
 
 /* --- Chat Messages (scrollable) --- */
+.on-tab-pane--chat {
+    display: flex;
+    flex-direction: column;
+}
+
+.on-chat-active-view {
+    display: flex;
+    flex-direction: column;
+}
+
 .on-chat-messages {
     flex: 1;
     overflow-y: auto;

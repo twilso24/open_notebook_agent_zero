@@ -18,18 +18,6 @@ TUNNEL_URL_FILE = "/a0/tmp/on-tunnel-url.txt"
 DEFAULT_API_URL = "http://host.docker.internal:5055"
 
 
-def _get_configured_api_url() -> str:
-    """Resolve the Open Notebook API URL from plugin config, env var, or default."""
-    try:
-        from helpers import plugins
-        cfg = plugins.get_plugin_config("open_notebook") or {}
-        if cfg.get("api_url"):
-            return cfg["api_url"]
-    except Exception:
-        pass
-    return os.environ.get("OPEN_NOTEBOOK_API_URL", DEFAULT_API_URL)
-
-
 def _check_url(url: str, timeout: int = 5) -> bool:
     """Check if a URL is reachable."""
     try:
@@ -114,15 +102,17 @@ def main():
         print("       Install: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/")
 
     # 3. Check ON backend connectivity
-    api_url = _get_configured_api_url()
+    api_url = os.environ.get("OPEN_NOTEBOOK_API_URL", DEFAULT_API_URL)
     print(f"\nChecking ON backend at {api_url} ...")
 
     if _check_url(api_url):
         print("[OK] Open Notebook backend is reachable.")
+    elif _check_url("http://localhost:5055"):
+        print("[OK] Open Notebook backend reachable at localhost:5055.")
+        api_url = "http://localhost:5055"
     else:
         print("[WARN] Open Notebook backend not reachable.")
-        print(f"       Make sure Open Notebook is running at {api_url}.")
-        print("       You can change the URL in plugin settings (api_url).")
+        print("       Make sure Open Notebook is running on the host (port 5055).")
         print("       The plugin will retry on each request.")
 
     # 4. Offer to start tunnel

@@ -14,10 +14,14 @@ from pathlib import Path
 _plugin_root = str(Path(__file__).resolve().parent.parent)
 if _plugin_root not in sys.path:
     sys.path.insert(0, _plugin_root)
+_tools_dir = str(Path(__file__).resolve().parent)
+if _tools_dir not in sys.path:
+    sys.path.insert(0, _tools_dir)
 
 import config
 import client
 import errors
+sys.modules.pop('shared', None)
 from shared import format_date, format_status, get_asset_type, handle_error
 
 # Limits
@@ -26,7 +30,7 @@ _MAX_TRANSCRIPT_CHARS = 2000
 
 class OpenNotebookPodcasts(Tool):
     async def execute(self, **kwargs):
-        method = self.method or "list"
+        method = kwargs.get("action") or self.method or "list"
 
         if method == "list":
             return await self._list()

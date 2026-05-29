@@ -18,7 +18,7 @@ triggers:
 # Open Notebook — Plugin Meta-Skill
 
 Open Notebook personal knowledge management plugin for Agent Zero.
-Provides AI-powered notebooks, source management, RAG queries, and podcast generation.
+Provides AI-powered notebooks, source management, name-based lookup, and podcast generation.
 
 Use when the user mentions Open Notebook, knowledge base, notebooks, sources, or podcasts.
 
@@ -30,7 +30,7 @@ Use when the user mentions Open Notebook, knowledge base, notebooks, sources, or
 | `opennotebook_manage` | Connection status & config | `status`, `config` |
 | `opennotebook_sources` | Manage content sources | `list`, `add`, `read`, `delete` |
 | `opennotebook_notes` | Manage notes | `list`, `create`, `read`, `update`, `delete` |
-| `opennotebook_query` | Search & RAG queries | `search`, `ask`, `find` |
+| `opennotebook_query` | Name-based lookup | `find` |
 | `opennotebook_podcasts` | Podcast generation | `profiles`, `generate`, `status`, `list`, `get`, `retry`, `delete` |
 
 ## User Journey Maps
@@ -39,19 +39,18 @@ Use when the user mentions Open Notebook, knowledge base, notebooks, sources, or
 1. `opennotebook_browse:notebooks` → see all notebooks
 2. `opennotebook_browse:notebook` → inspect a specific notebook
 3. `opennotebook_sources:list` → see sources in that notebook
-4. `opennotebook_query:search` → search within the notebook
+4. `opennotebook_query:find` → look up specific items by name
 
 ### Research a Topic
 1. Use the **open-notebook-research** skill for guided query workflow
-2. `opennotebook_query:search` → broad scan
-3. `opennotebook_query:ask` → synthesized answer
-4. `opennotebook_notes:create` → save findings as a note
+2. `opennotebook_query:find` → locate specific items by name
+3. `opennotebook_notes:create` → save findings as a note
 
 ### Add Content
 1. `opennotebook_browse:notebooks` → pick a notebook
 2. `opennotebook_sources:add` → add URL, file, or text
 3. Wait for processing (check with `opennotebook_sources:list`)
-4. `opennotebook_query:search` → verify content is searchable
+4. `opennotebook_sources:list` → verify content was added
 
 ### Create a Podcast
 1. Use the **open-notebook-podcast** skill for the full async workflow
@@ -72,10 +71,8 @@ Use `opennotebook_manage:config` to view settings:
 - **API URL** — Open Notebook backend address
 - **Read Only** — prevents write/delete operations
 - **Confirmations** — requires confirmation before destructive ops
-- **Default Ask Model** — model for RAG queries
 
 ## Prerequisites
 
 - Open Notebook backend running on port 5055
 - Plugin enabled in Agent Zero
-- Sources must be processed before they appear in search results

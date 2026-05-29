@@ -3,8 +3,8 @@
 Provides runtime tunnel URL discovery for the ON store JS.
 No hardcoded URLs — the store calls this on page load.
 
-GET  /api/plugins/open_notebook/tunnel  → {"tunnel_url": "https://..."} | {"tunnel_url": null}
-POST /api/plugins/open_notebook/tunnel  → {action: "start"|"stop"}
+GET  /api/plugins/open-notebook/tunnel  → {"tunnel_url": "https://..."} | {"tunnel_url": null}
+POST /api/plugins/open-notebook/tunnel  → {action: "start"|"stop"}
 
 Dependencies: cloudflared binary only (no pip packages)
 """
@@ -22,22 +22,9 @@ logger = logging.getLogger("open_notebook")
 
 TUNNEL_URL_FILE = Path("/a0/tmp/on-tunnel-url.txt")
 TUNNEL_PID_FILE = Path("/a0/tmp/on-tunnel.pid")
-DEFAULT_TUNNEL_TARGET = "http://host.docker.internal:5055"
-
-
-def _get_tunnel_target() -> str:
-    """Resolve the Open Notebook backend URL for tunnel target.
-
-    Priority: plugin config > env var > default.
-    """
-    try:
-        from helpers import plugins
-        cfg = plugins.get_plugin_config("open_notebook") or {}
-        if cfg.get("api_url"):
-            return cfg["api_url"]
-    except Exception:
-        pass
-    return os.environ.get("ON_TUNNEL_TARGET", DEFAULT_TUNNEL_TARGET)
+DEFAULT_TUNNEL_TARGET = os.environ.get(
+    "ON_TUNNEL_TARGET", "http://host.docker.internal:5055"
+)
 
 
 def _find_tunnel_url_from_metrics() -> str | None:
@@ -138,7 +125,7 @@ class TunnelHandler(ApiHandler):
         return {
             "tunnel_url": url,
             "active": url is not None,
-            "target": _get_tunnel_target(),
+            "target": DEFAULT_TUNNEL_TARGET,
         }
 
     async def _start(self) -> dict:
@@ -149,7 +136,7 @@ class TunnelHandler(ApiHandler):
 
         try:
             proc = subprocess.Popen(
-                ["cloudflared", "tunnel", "--url", _get_tunnel_target()],
+                ["cloudflared", "tunnel", "--url", DEFAULT_TUNNEL_TARGET],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 text=False,
@@ -199,7 +186,7 @@ class TunnelHandler(ApiHandler):
 
         # Also kill any cloudflared processes tunneling our target
         try:
-            subprocess.run(["pkill", "-f", "cloudflared.*tunnel"],
+            subprocess.run(["pkill", "-f", "cloudflared.*tunnel.*5055"],
                            timeout=3, capture_output=True)
         except Exception:
             pass

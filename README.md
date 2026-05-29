@@ -1,220 +1,250 @@
 # Open Notebook Plugin for Agent Zero
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Agent Zero Plugin](https://img.shields.io/badge/Agent%20Zero-Plugin-purple.svg)](https://github.com/agent0ai/a0-plugins)
-
-Connect your [Open Notebook](https://github.com/lfnovo/open-notebook) instance to [Agent Zero](https://github.com/agent0ai/agent-zero) for seamless knowledge management — browse notebooks, manage sources, query with RAG, create notes, generate podcasts, and interact through a right-canvas knowledge panel.
-
-## Screenshots
-
-### Notebook Browser
-![Notebook Browser](docs/screenshot-notebooks.png)
-
-### Chat & RAG Queries
-![Chat & RAG Queries](docs/screenshot-chat.png)
-
-### Podcast Generation
-![Podcast Generation](docs/screenshot-podcasts.png)
-
-### Notes
-![Notes](docs/screenshot-notes.png)
-
-### Source Management
-![Source Management](docs/screenshot-sources.png)
+A comprehensive knowledge management plugin that integrates [Open Notebook](https://github.com/Open-Notebook) into Agent Zero's WebUI, providing AI-powered notebooks, source management, session-based chat, podcast generation, and more — all from a sidebar panel.
 
 ## Features
 
-- **Browse Notebooks** — Navigate your notebook tree, inspect notebooks and sources
-- **Source Management** — Add URLs and text as sources, list, read, retry, and delete
-- **RAG Queries** — Search with keyword/vector search, ask questions over notebook content
-- **Notes** — Full CRUD: create, read, update, and delete notes in any notebook
-- **Podcasts** — Generate, list, inspect, retry, and download podcast episodes from your notebooks
-- **Knowledge Panel** — Interactive right-canvas panel in the Agent Zero WebUI
-- **Configurable Connection** — Point to any Open Notebook host and port
-- **Optional Tunneling** — Cloudflare quick tunnel support for remote browser access
+### Notebooks
+- Browse, create, rename, and delete notebooks
+- Name-based source and note lookup
+- Notebook-scoped AI chat with session history
 
-## Prerequisites
+### Sources
+- Import by **URL**, **text**, or **file upload**
+- View processing status with colored badges
+- Retry failed source processing
+- AI-powered source insights with one-click save to notes
+- Delete sources from the panel
 
-- [Agent Zero](https://github.com/agent0ai/agent-zero) with plugin support
-- A running [Open Notebook](https://github.com/lfnovo/open-notebook) backend instance
-- Python 3.10+
-- Optional: [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) for tunnel-based remote access
+### AI Chat
+- **Notebook chat** — session-based conversations scoped to a notebook
+- **Source chat** — chat about a specific source (SSE streaming)
+- Rename and delete chat sessions
+- Copy AI responses to clipboard
 
-## Installation
+### Notes
+- Full CRUD: create, read, edit, delete
+- Inline editing with save/cancel
+- Save AI insights as notes in one click
 
-### From Plugin Hub (Recommended)
+### Podcasts
+- Generate podcasts per notebook with profile selection
+- Episode and speaker profile dropdowns (auto-selected)
+- Job polling with progress status
+- Audio playback with play/pause controls
 
-1. Open Agent Zero Settings → Plugins
-2. Find **Open Notebook** in the Plugin Hub
-3. Click **Install**
-4. Configure the `api_url` setting to point to your Open Notebook instance
-
-### Manual Installation
-
-1. Clone or download this repository
-2. Copy the `open_notebook/` directory to your Agent Zero user plugins folder:
-
-```bash
-cp -r open_notebook/ /path/to/agent-zero/usr/plugins/
-```
-
-3. Restart Agent Zero
-4. Enable the plugin in Settings → Plugins
-
-## Configuration
-
-### Open Notebook URL
-
-Set the `api_url` to point to your Open Notebook backend:
-
-| Environment | Example |
-|---|---|
-| Docker (default) | `http://host.docker.internal:5055` |
-| Custom port | `http://host.docker.internal:8080` |
-| LAN IP | `http://192.168.1.100:5055` |
-| Localhost | `http://localhost:5055` |
-
-The URL is resolved in this order:
-
-1. Plugin setting `api_url` (Agent Zero Settings UI)
-2. Environment variable `OPEN_NOTEBOOK_API_URL`
-3. Default: `http://host.docker.internal:5055`
-
-All backend components (proxy, tunnel, health check, tools) respect this single setting.
-
-### All Settings
-
-| Setting | Default | Purpose |
-|---|---|---|
-| `api_url` | `http://host.docker.internal:5055` | Base URL for the Open Notebook API |
-| `read_only` | `false` | Block write/delete operations when `true` |
-| `confirmations` | `true` | Ask for confirmation before destructive operations |
-| `default_ask_model` | *(empty)* | Optional default model for ask/RAG operations |
-
-Settings can be configured in Agent Zero under Settings → External, or directly in `default_config.yaml`.
-
-## Usage
-
-Once installed and configured, the plugin provides six agent tools and three skills.
-
-### Agent Tools
-
-| Tool | Methods | Description |
-|---|---|---|
-| `opennotebook_browse` | `notebooks`, `notebook`, `source` | Navigate notebook trees and inspect content |
-| `opennotebook_manage` | `status`, `config` | Check connection and view configuration |
-| `opennotebook_sources` | `list`, `add`, `read`, `retry`, `delete` | Manage sources in your notebooks |
-| `opennotebook_notes` | `list`, `create`, `read`, `update`, `delete` | Full note management |
-| `opennotebook_query` | `search`, `ask`, `find` | Search and ask questions over notebook content |
-| `opennotebook_podcasts` | `generate`, `status`, `list`, `download`, `retry`, `delete` | Generate and manage podcast episodes |
-
-### Example Prompts
-
-```
-Browse my Open Notebook notebooks
-```
-```
-Add https://example.com/article as a source to my Research notebook
-```
-```
-Ask my Research notebook: What are the key findings from the user interviews?
-```
-```
-Create a note in my Research notebook titled "Key Insight" with the following content: ...
-```
-```
-Generate a podcast from my Research notebook
-```
-
-### Skills
-
-The plugin includes three skills that guide the agent through common workflows:
-
-| Skill | Description |
-|---|---|
-| `open-notebook` | Meta-skill: tool map, user journeys, and first-time setup guidance |
-| `open-notebook-research` | Guided research and query workflow with search/ask/find decision tree |
-| `open-notebook-podcast` | Async podcast generation workflow: profile discovery, generation, and monitoring |
+### UI/UX
+- Theme-adaptive via Agent Zero CSS variables
+- Chat-shift panel pushes main chat left (like Honcho)
+- Resizable panel (300-800px) with double-click reset
+- Mobile responsive with overlay mode
+- Text selection, copy buttons, Escape to close
+- Empty states for all tabs
+- "Send to Chat" bridges plugin results to Agent Zero chat
 
 ## Architecture
 
-### File Structure
+```
+Agent Zero WebUI
+├── Sidebar Extension Point
+│   └── open-notebook-sidebar.html  (Alpine.js templates)
+├── Page Head Extension Point
+│   └── open-notebook-head.html     (CSS styles)
+└── Plugin Static Files
+    ├── webui/open-notebook-store.js (Alpine.js store)
+    └── extensions/webui/
+        ├── sidebar-end/             (HTML + store source)
+        └── page-head/               (CSS source)
 
-```text
-open_notebook/
-├── plugin.yaml                  # Runtime manifest
-├── default_config.yaml           # Default settings
-├── config.py                     # Configuration helper
-├── client.py                     # Open Notebook API client
-├── execute.py                    # Setup/connectivity script
-├── shared.py                     # Shared utilities
-├── errors.py                     # Error types
-├── telemetry.py                  # Telemetry module
-├── requirements.txt              # Python dependencies
-├── LICENSE                       # MIT license
-├── README.md                     # This file
-├── api/
-│   ├── proxy.py                  # API proxy handler
-│   └── tunnel.py                 # Tunnel management handler
-├── extensions/
-│   ├── python/
-│   │   └── tool_execute_before/
-│   │       └── _10_health_check.py
-│   └── webui/
-│       ├── page-head/            # CSS injection
-│       ├── sidebar-end/          # Sidebar controls
-│       ├── right_canvas_register_surfaces/  # Canvas registration
-│       └── right-canvas-panels/  # Knowledge panel
-├── prompts/default/              # Agent tool prompt templates
-├── skills/                       # Guided workflow skills
-│   ├── open-notebook/
-│   ├── open-notebook-research/
-│   └── open-notebook-podcast/
-├── tools/                        # Agent tools
-│   ├── opennotebook_browse.py
-│   ├── opennotebook_manage.py
-│   ├── opennotebook_notes.py
-│   ├── opennotebook_podcasts.py
-│   ├── opennotebook_query.py
-│   ├── opennotebook_sources.py
-│   └── shared.py
-└── webui/                        # Frontend assets
-    ├── canvas-panel.html
-    ├── open-notebook.css
-    └── open-notebook-store.js
+Open Notebook API (port 5055)
+├── /api/notebooks       (CRUD)
+├── /api/sources         (import, delete, insights, status, retry)
+├── /api/notes           (CRUD)
+├── /api/chat/*          (session-based notebook chat)
+├── /api/sources/{id}/chat/*  (source-scoped chat)
+└── /api/podcasts/*      (generate, episodes, audio)
 ```
 
-### Runtime Routes
+## File Structure
 
-| Route | Purpose |
+```
+/a0/usr/plugins/open-notebook/
+├── README.md
+├── plugin.json
+├── webui/
+│   └── open-notebook-store.js       (Alpine.js store, served to browser)
+├── extensions/
+│   └── webui/
+│       ├── sidebar-end/
+│       │   ├── open-notebook-sidebar.html  (HTML templates)
+│       │   └── open-notebook-store.js      (store source, must stay in sync)
+│       └── page-head/
+│           └── open-notebook-head.html     (CSS styles)
+├── tools/
+│   ├── open_notebook_browse.py      (notebook/source browsing)
+│   ├── open_notebook_podcast.py     (podcast generation)
+│   └── opennotebook_query.py        (name-based lookup)
+└── requirements.txt
+```
+
+## Prerequisites
+
+- **Agent Zero** running with WebUI enabled
+- **Open Notebook** backend on port 5055
+- **Open Notebook** UI on port 8502 (optional, for standalone use)
+- **cloudflared** (optional, for direct tunnel access from remote browsers)
+
+## Connection & Configuration
+
+The store dynamically discovers the backend at runtime — no hardcoded URLs.
+
+| Environment | Method | URL |
+|---|---|---|
+| Browser (local) | Direct connect | `http://localhost:5055` |
+| Browser (remote) | A0 proxy | `/api/plugins/open-notebook/proxy` |
+| Browser (tunnel) | Cloudflare tunnel | `https://*.trycloudflare.com` |
+| Docker (server-side) | Direct | `http://host.docker.internal:5055` |
+
+### Detection Flow (on page load)
+1. Check for active cloudflare tunnel URL via `/api/plugins/open-notebook/tunnel`
+2. If remote + no tunnel: auto-start cloudflare tunnel (if cloudflared available)
+3. If local: try direct `localhost:5055` connection
+4. Fall back to A0 proxy mode (routes through `/api/plugins/open-notebook/proxy`)
+
+## Service Worker Caching
+
+The A0 WebUI includes a Service Worker (`/sw.js`) that caches static assets for faster repeat page loads.
+
+| Asset Type | Strategy | Behavior |
+|---|---|---|
+| Vendor JS/CSS/fonts | Stale-While-Revalidate | Instant from cache, background update |
+| HTML pages | Network-First | Always fresh, cache fallback |
+| API/WebSocket | Network-Only | Never cached |
+| CDN (Bootstrap) | Cache-First | Cached with no-cors |
+
+Pre-cached on install: ~25 critical assets (ace.js, katex, fonts, CSS, etc.)
+Cache version: `a0-static-v1` — bump in `/a0/webui/sw.js` to bust cache.
+
+## API Endpoints
+
+### Notebooks
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/notebooks` | List all |
+| POST | `/api/notebooks` | Create |
+| PUT | `/api/notebooks/{id}` | Rename |
+| DELETE | `/api/notebooks/{id}` | Delete |
+
+### Sources
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/sources?notebook_id={id}` | List for notebook |
+| POST | `/api/sources/json` | Add URL/text |
+| POST | `/api/sources` | Upload file |
+| DELETE | `/api/sources/{id}` | Delete |
+| GET | `/api/sources/{id}/status` | Processing status |
+| POST | `/api/sources/{id}/retry` | Retry failed |
+| GET/POST | `/api/sources/{id}/insights` | AI insights |
+
+### Notes
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/notes?notebook_id={id}` | List |
+| POST | `/api/notes` | Create |
+| PUT | `/api/notes/{id}` | Update |
+| DELETE | `/api/notes/{id}` | Delete |
+
+### Chat
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/chat/sessions` | Create session |
+| POST | `/api/chat/context` | Build context |
+| POST | `/api/chat/execute` | Execute (JSON) |
+| PUT | `/api/chat/sessions/{id}` | Rename |
+| DELETE | `/api/chat/sessions/{id}` | Delete |
+
+### Source Chat
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/sources/{id}/chat/sessions` | Create session |
+| POST | `/api/sources/{id}/chat/sessions/{sid}/messages` | Send (SSE) |
+
+### Podcasts
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/podcasts/episodes` | List episodes |
+| POST | `/api/podcasts/generate` | Generate |
+| GET | `/api/podcasts/jobs/{id}` | Job status |
+| GET | `/api/podcasts/episodes/{id}/audio` | Stream audio |
+
+## Panel Layout
+
+```
++--------------------------------------------+
+| Agent Zero Top Bar (0-60px)                |
++----------+------------+--------------------+
+| Left     |  Chat      | [Back] Title [X]   |
+| Sidebar  |  Window    |                    |
+| 250px    | (shifted)  | [Tab Content]      |
+|          |            |                    |
+|          |            | <-- Resizable 300-800 -->|
++----------+------------+--------------------+
+```
+
+**Tabs:** Sources | Notes | Chat | Podcasts
+
+## Development Notes
+
+### Dual-Path Deployment
+
+The store must exist at two paths and stay in sync:
+- `extensions/webui/sidebar-end/open-notebook-store.js` (source)
+- `webui/open-notebook-store.js` (served to browser)
+
+
+### Connection Detection
+The store uses `isLocalAccess()` to check if the browser is on localhost. Remote browsers never attempt direct `localhost:5055` connections, avoiding `ERR_CONNECTION_REFUSED` errors. All fetches go through `smartFetch()` which automatically waits for connection detection to complete before making requests.
+
+### Store Sync
+Both store copies must stay in sync:
+- `webui/open-notebook-store.js` (served to browser)
+- `extensions/webui/sidebar-end/open-notebook-store.js` (source)
+
+After any change: `cp extensions/.../store.js webui/store.js`
+
+### Alpine.js: x-show vs display:flex
+
+`x-show` overrides `display: flex` with `display: block`. Use `:style` bindings for flex containers:
+
+```html
+<!-- BAD -->
+<div x-show="condition" class="on-tab-pane--chat">
+
+<!-- GOOD -->
+<div class="on-tab-pane--chat"
+     :style="condition ? 'display:flex' : 'display:none'">
+```
+
+### SSE vs JSON
+- **Notebook chat** returns JSON
+- **Source chat** returns SSE (Server-Sent Events)
+
+Use `String.fromCharCode(10)` for newline splitting in SSE parsing.
+
+### Podcast Profiles
+- API expects profile **names** (e.g. `tech_discussion`), not IDs
+- `solo_expert` speaker profile filtered (invalid TTS config)
+- Profiles auto-selected on first available
+
+## Stats
+
+| Metric | Value |
 |---|---|
-| `/plugins/open_notebook/*` | Static assets served to the browser |
-| `/api/plugins/open_notebook/proxy` | Backend proxy to Open Notebook API |
-| `/api/plugins/open_notebook/tunnel` | Tunnel management and status |
-
-## Security
-
-- **You control the backend.** This plugin connects to an Open Notebook instance you configure. No data is sent to third parties.
-- **Tunnel awareness.** If you enable tunneling, the Cloudflare quick tunnel creates a publicly reachable URL. Only enable this when you intend to share access externally.
-- **No secrets in code.** Do not commit API keys or tokens to this plugin. Use Agent Zero's settings UI or environment variables.
-- **Read-only mode.** Set `read_only: true` to prevent all write and delete operations during exploratory use.
-- **Confirmations.** Set `confirmations: true` (default) to require approval before destructive actions.
-
-## Troubleshooting
-
-| Issue | Solution |
-|---|---|
-| "Connection refused" | Verify your Open Notebook backend is running and `api_url` is correct |
-| Tools not appearing | Restart Agent Zero to refresh tool registration cache |
-| Tunnel not starting | Ensure `cloudflared` is installed and in your PATH |
-| Sources timing out | Link sources may take 30–120s to process; increase your timeout settings |
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
-## Links
-
-- [Open Notebook](https://github.com/lfnovo/open-notebook) — The knowledge management system
-- [Agent Zero](https://github.com/agent0ai/agent-zero) — The AI agent framework
-- [Plugin Index](https://github.com/agent0ai/a0-plugins) — Browse more Agent Zero plugins
+| Plugin Files | 3 core (store, HTML, CSS) + SW |
+| Store Lines | ~1,600 |
+| SW Lines | ~390 |
+| Store Methods | 30+ |
+| API Endpoints | 25+ |
+| CSS Classes | 60+ |
+| Pre-cached Assets | ~25 |
+| Connection Modes | 3 (direct, tunnel, proxy) |

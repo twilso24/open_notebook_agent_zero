@@ -36,7 +36,7 @@ async function proxyFetch(path, options = {}) {
         if (typeof h === "object") Object.assign(headers, h);
     }
     const fn = await getApi();
-    const result = await fn("plugins/open_notebook/proxy", {
+    const result = await fn("plugins/open-notebook/proxy", {
         method: method,
         path: path,
         body: body,
@@ -56,7 +56,7 @@ async function detectConnectionMode() {
 
     // ── Step 1: Check for existing tunnel ──
     try {
-        const tunnelInfo = await fn("plugins/open_notebook/tunnel", {});
+        const tunnelInfo = await fn("plugins/open-notebook/tunnel", {});
         if (tunnelInfo && tunnelInfo.tunnel_url) {
             _tunnelUrl = tunnelInfo.tunnel_url;
             API_BASE = _tunnelUrl;
@@ -81,7 +81,7 @@ async function detectConnectionMode() {
     // ── Step 2: If remote, try auto-starting tunnel ──
     if (!local && !_tunnelUrl) {
         try {
-            const startResult = await fn("plugins/open_notebook/tunnel", { action: "start" });
+            const startResult = await fn("plugins/open-notebook/tunnel", { action: "start" });
             if (startResult && startResult.ok && startResult.tunnel_url) {
                 _tunnelUrl = startResult.tunnel_url;
                 API_BASE = _tunnelUrl;
@@ -151,7 +151,7 @@ async function getAudioUrl(path) {
     if (_useProxy) {
         // For audio, we need to route through the proxy with binary support
         // Use a direct proxy path that streams the audio
-        return `/api/plugins/open_notebook/proxy?__audio=1&path=${encodeURIComponent(path)}`;
+        return `/api/plugins/open-notebook/proxy?__audio=1&path=${encodeURIComponent(path)}`;
     }
     return API_BASE + path;
 }
@@ -660,6 +660,8 @@ const model = {
         try {
             const resp = await smartFetch('/api/insights/' + insightId + '/save-as-note', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notebook_id: this.selectedNotebook?.id || '' }),
             });
             if (!resp.ok) throw new Error('Failed to save insight as note');
             await this.loadNotes();
@@ -721,39 +723,6 @@ const model = {
         }
     },
 
-
-    // ── Global Search (homepage — all notebooks) ───────────
-    async submitGlobalSearch() {
-        if (!this.globalSearchText?.trim()) return;
-        this.globalSearchLoading = true;
-        this.globalSearchResult = null;
-        this.error = null;
-        try {
-            const resp = await smartFetch(`/api/search`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    query: this.globalSearchText,
-                    type: 'text',
-                    search_sources: true,
-                    search_notes: true,
-                    limit: 10,
-                }),
-            });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-            this.globalSearchResult = await resp.json();
-        } catch (e) {
-            this.error = `Search failed: ${e.message}`;
-            this.globalSearchResult = null;
-        } finally {
-            this.globalSearchLoading = false;
-        }
-    },
-
-    clearGlobalSearch() {
-        this.globalSearchText = '';
-        this.globalSearchResult = null;
-        this.globalSearchLoading = false;
-    },
 
     // ── Notebook Chat (session-based) ──────────────────────
     async loadChatSessions() {
@@ -1491,7 +1460,7 @@ const model = {
         if (_useProxy || _tunnelUrl) {
             try {
                 const fn = await getApi();
-                fn("plugins/open_notebook/tunnel", { action: "toast", message: "💡 The full Open Notebook UI is available right here in the sidebar panel. The separate Streamlit UI requires local network access (port 8502)." });
+                fn("plugins/open-notebook/tunnel", { action: "toast", message: "💡 The full Open Notebook UI is available right here in the sidebar panel. The separate Streamlit UI requires local network access (port 8502)." });
             } catch(e) {}
             return;
         }

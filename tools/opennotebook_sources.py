@@ -3,7 +3,7 @@ Open Notebook Plugin - Sources Tool
 
 Manages knowledge sources within Open Notebook notebooks. Sources are the raw content
 (URLs, files, text) that get processed, chunked, and embedded into a vector store
-for search and RAG-based question answering.
+for retrieval and note-taking.
 
 Methods:
     list   — List all sources in a notebook (table view with name, type, status, date)
@@ -14,8 +14,8 @@ Methods:
 Usage:
     First use `opennotebook_browse:notebooks` to get a notebook ID,
     then use `opennotebook_sources:list` to see sources in that notebook.
-    Add sources with `opennotebook_sources:add`, then query them with
-    `opennotebook_query:search` or `opennotebook_query:ask`.
+    Add sources with `opennotebook_sources:add`, then use
+    `opennotebook_query:find` to locate specific items by name.
 """
 
 from helpers.tool import Tool, Response
@@ -28,10 +28,14 @@ from pathlib import Path
 _plugin_root = str(Path(__file__).resolve().parent.parent)
 if _plugin_root not in sys.path:
     sys.path.insert(0, _plugin_root)
+_tools_dir = str(Path(__file__).resolve().parent)
+if _tools_dir not in sys.path:
+    sys.path.insert(0, _tools_dir)
 
 import config
 import client
 import errors
+sys.modules.pop('shared', None)
 from shared import format_date, format_status, get_asset_type, handle_error
 
 # Limits for display — prevents overwhelming output
@@ -101,23 +105,37 @@ class OpenNotebookSources(Tool):
         Returns:
             Response: The result from the delegated method handler.
         """
-        method = self.method or "list"
+        method = kwargs.get("action") or self.method or "list"
 
         if method == "list":
             # List all sources in a notebook — requires notebook_id
-            notebook_id = kwargs.get("notebook_id", "")
+            notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
+            if notebook_id:
+                try:
+                    sys.modules.pop('shared', None)
+                    from shared import resolve_notebook_id
+                    notebook_id = await resolve_notebook_id(self.agent, notebook_id)
+                except ValueError as e:
+                    return Response(message=f"❌ **{e}**", break_loop=False)
             return await self._list(notebook_id)
         elif method == "add":
             # Add a new source — auto-detects type from content (URL, file, text)
-            notebook_id = kwargs.get("notebook_id", "")
-            content = kwargs.get("content", "")
+            notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
+            if notebook_id:
+                try:
+                    sys.modules.pop('shared', None)
+                    from shared import resolve_notebook_id
+                    notebook_id = await resolve_notebook_id(self.agent, notebook_id)
+                except ValueError as e:
+                    return Response(message=f"❌ **{e}**", break_loop=False)
+            content = kwargs.get("content", "") or kwargs.get("url", "")
             title = kwargs.get("title", "")
             confirmed = kwargs.get("confirmed", "false").lower() == "true"
             return await self._add(notebook_id, content, title, confirmed)
         elif method == "read":
             # Read full source content — requires source_id
-            notebook_id = kwargs.get("notebook_id", "")
-            source_id = kwargs.get("source_id", "")
+            notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
+            source_id = kwargs.get("source_id", "") or kwargs.get("source", "")
             return await self._read(source_id)
         elif method == "delete":
             # Delete a source permanently — requires source_id, optional confirmation
@@ -194,7 +212,7 @@ class OpenNotebookSources(Tool):
                 remaining = total - _MAX_SOURCES
                 lines.append(
                     f"\n...and {remaining} more sources. "
-                    f"Use `opennotebook_query:search` to find specific sources."
+                    f"Use `opennotebook_query:find` to locate specific items by name."
                 )
 
             return Response(
@@ -306,8 +324,7 @@ class OpenNotebookSources(Tool):
 
             lines.append(
                 f"\n💡 Source is processing. Insights will be generated automatically. "
-                f"Use `opennotebook_sources:list` to check status, "
-                f"or `opennotebook_query:search` to search once processing is complete."
+                f"Use `opennotebook_sources:list` to check processing status."
             )
 
             return Response(

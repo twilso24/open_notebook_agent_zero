@@ -4,10 +4,10 @@ Proxies all requests from the frontend through Agent Zero's API port
 so remote clients can reach the Open Notebook backend without
 direct access to localhost:5055.
 
-Frontend calls: POST /api/plugins/open_notebook/proxy
+Frontend calls: POST /api/plugins/open-notebook/proxy
 Body: { "method": "GET", "path": "/api/notebooks", "body": null, "headers": {} }
 
-GET mode (for audio/binary): /api/plugins/open_notebook/proxy?__audio=1&path=/api/podcasts/episodes/.../audio
+GET mode (for audio/binary): /api/plugins/open-notebook/proxy?__audio=1&path=/api/podcasts/episodes/.../audio
 """
 
 import json as json_mod
@@ -16,24 +16,10 @@ from typing import Any, Dict
 
 import httpx
 from flask import request as flask_request
-from helpers import plugins
 from helpers.api import ApiHandler, Request, Response
 
-DEFAULT_API_URL = "http://host.docker.internal:5055"
-
-
-def _get_api_url() -> str:
-    """Resolve the Open Notebook backend URL.
-
-    Priority: plugin config > env var > default.
-    """
-    try:
-        cfg = plugins.get_plugin_config("open_notebook") or {}
-        if cfg.get("api_url"):
-            return cfg["api_url"]
-    except Exception:
-        pass
-    return os.environ.get("OPEN_NOTEBOOK_API_URL", DEFAULT_API_URL)
+# Backend URL from env or default
+ON_API_URL = os.environ.get("OPEN_NOTEBOOK_API_URL", "http://host.docker.internal:5055")
 
 
 class ProxyHandler(ApiHandler):
@@ -58,7 +44,7 @@ class ProxyHandler(ApiHandler):
     async def _handle_binary_proxy(self, request: Request) -> Response:
         """Handle GET requests for binary content (audio files, etc.)."""
         path = request.args.get("path", "/")
-        target_url = _get_api_url().rstrip("/") + "/" + path.lstrip("/")
+        target_url = ON_API_URL.rstrip("/") + "/" + path.lstrip("/")
 
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
@@ -91,7 +77,7 @@ class ProxyHandler(ApiHandler):
         extra_headers = input.get("headers", {})
 
         # Build target URL
-        target_url = _get_api_url().rstrip("/") + "/" + path.lstrip("/")
+        target_url = ON_API_URL.rstrip("/") + "/" + path.lstrip("/")
 
         # Build headers
         headers: Dict[str, str] = {
@@ -152,7 +138,7 @@ class ProxyHandler(ApiHandler):
             return Response(
                 response=json_mod.dumps({
                     "ok": False,
-                    "error": "Open Notebook backend unreachable on " + _get_api_url(),
+                    "error": "Open Notebook backend unreachable on " + ON_API_URL,
                 }),
                 status=502,
                 mimetype="application/json",

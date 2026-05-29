@@ -8,7 +8,7 @@ All tools import from this module — never access config directly.
 from agent import Agent
 from helpers import plugins
 
-PLUGIN_NAME = "open_notebook"
+PLUGIN_NAME = "open-notebook"
 
 
 def _get_config(agent: Agent) -> dict:
@@ -33,6 +33,3 @@ def needs_confirmation(agent: Agent) -> bool:
     return _get_config(agent).get("confirmations", True)
 
 
-def get_default_ask_model(agent: Agent) -> str:
-    """Get the default model name for ask/RAG operations."""
-    return _get_config(agent).get("default_ask_model", "")

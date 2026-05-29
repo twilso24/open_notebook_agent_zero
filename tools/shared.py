@@ -60,3 +60,48 @@ def handle_error(error: Exception, url: str) -> str:
         return format_http_error(error)
     else:
         return format_unexpected(error)
+
+
+async def resolve_notebook_id(agent, notebook_id_or_name: str) -> str:
+    """Resolve a notebook name or partial ID to a full notebook ID.
+    
+    If the value already looks like a full ID (starts with 'notebook:'), return it as-is.
+    Otherwise, fetch all notebooks and search by name (case-insensitive, emoji-stripped).
+    Returns the full ID string, or raises ValueError if not found.
+    """
+    import re
+    from pathlib import Path
+    import sys
+    _plugin_root = str(Path(__file__).resolve().parent.parent)
+    if _plugin_root not in sys.path:
+        sys.path.insert(0, _plugin_root)
+    import config
+    import client
+    
+    if not notebook_id_or_name:
+        raise ValueError("Notebook ID or name is required")
+    
+    # Already a full ID
+    if notebook_id_or_name.startswith("notebook:"):
+        return notebook_id_or_name
+    
+    # Fetch all notebooks and search by name
+    api_url = config.get_api_url(agent)
+    url = f"{api_url}/api/notebooks"
+    http_client = await client.get_client()
+    response = await http_client.get(url)
+    response.raise_for_status()
+    all_notebooks = response.json()
+    
+    search_term = notebook_id_or_name.lower()
+    for nb in all_notebooks:
+        # Strip emoji for matching
+        clean_name = re.sub(r'[\U00010000-\U0010ffff]', '', nb.get('name', '')).strip().lower()
+        nb_id = nb.get('id', '')
+        # Match on clean name or short ID suffix
+        short_id = nb_id.split(':')[-1] if nb_id else ''
+        if (search_term in clean_name or clean_name in search_term or 
+            short_id == search_term or short_id.endswith(search_term)):
+            return nb_id
+    
+    raise ValueError(f"No notebook found matching '{notebook_id_or_name}'")

@@ -1,8 +1,8 @@
 """
 Open Notebook Plugin - Manage Tool
 
-Provides connection status checking and configuration display.
-Methods: status, config
+Provides connection status checking, configuration display, and notebook creation.
+Methods: status, config, create
 """
 
 import time
@@ -35,9 +35,11 @@ class OpenNotebookManage(Tool):
             return await self._status()
         elif method == "config":
             return await self._config()
+        elif method == "create":
+            return await self._create(**kwargs)
         else:
             return Response(
-                message=f"❌ Unknown method '{method}'. Available: status, config",
+                message=f"❌ Unknown method '{method}'. Available: status, config, create",
                 break_loop=False,
             )
 
@@ -103,7 +105,6 @@ class OpenNotebookManage(Tool):
 
     async def _config(self) -> Response:
         """Display current plugin configuration."""
-        # Placeholder — full implementation in Story 1.4
         return Response(
             message=(
                 f"⚙️ **Open Notebook Plugin Configuration**\n"
@@ -116,3 +117,96 @@ class OpenNotebookManage(Tool):
             ),
             break_loop=False,
         )
+
+    async def _create(self, **kwargs) -> Response:
+        """Create a new notebook with the given name and optional description.
+
+        Args:
+            name: Required. Name for the new notebook.
+            description: Optional. Description for the notebook.
+            confirmed: Whether the user has confirmed the creation.
+
+        Returns:
+            Response: Success message with notebook details, or a validation/
+                      confirmation/error message with guidance.
+        """
+        # Read-only mode prevents write operations
+        if config.is_read_only(self.agent):
+            return Response(
+                message=(
+                    "⚠️ **Plugin is in read-only mode.** Cannot create notebooks.\n"
+                    "Use `opennotebook_config:settings` to check or change read-only mode."
+                ),
+                break_loop=False,
+            )
+
+        # Validate required name parameter
+        name = kwargs.get("name", "")
+        if not name or not name.strip():
+            return Response(
+                message=(
+                    "❌ **Notebook name required.**\n"
+                    "Provide a name for the new notebook.\n"
+                    "Example: `opennotebook_manage:create` with `name='My Research Notebook'`."
+                ),
+                break_loop=False,
+            )
+
+        description = kwargs.get("description", "")
+        confirmed = str(kwargs.get("confirmed", "false")).lower() == "true"
+
+        # Confirmation gate — show notebook details before creating
+        if config.needs_confirmation(self.agent) and not confirmed:
+            return Response(
+                message=(
+                    f"⚠️ **Confirm creating notebook**\n"
+                    f"\n| Detail | Value |"
+                    f"\n|--------|-------|"
+                    f"\n| Name | `{name}` |"
+                    f"\n| Description | {description or 'No description'} |"
+                    f"\n\nTo confirm, call again with `confirmed: true`."
+                ),
+                break_loop=False,
+            )
+
+        # Build API request — POST /api/notebooks with form-encoded data
+        api_url = config.get_api_url(self.agent)
+        url = f"{api_url}/api/notebooks"
+
+        try:
+            http_client = await client.get_client()
+            response = await http_client.post(url, json={
+                "name": name,
+                "description": description
+            })
+            response.raise_for_status()
+            data = response.json()
+
+            # Extract created notebook details from API response
+            notebook_id = data.get("id", "unknown")
+            notebook_name = data.get("name", name)
+            notebook_desc = data.get("description", description)
+
+            # Build response with notebook details
+            lines = [
+                f"✅ **Notebook created successfully**",
+                "",
+                f"| Detail | Value |",
+                f"|--------|-------|",
+                f"| ID | `{notebook_id}` |",
+                f"| Name | {notebook_name} |",
+                f"| Description | {notebook_desc or 'No description'} |",
+            ]
+
+            lines.append(
+                f"\n💡 You can now add sources to this notebook using "
+                f"`opennotebook_sources:add` with `notebook_id='{notebook_id}'`."
+            )
+
+            return Response(
+                message="\n".join(lines),
+                break_loop=False,
+            )
+
+        except Exception as e:
+            return Response(message=handle_error(e, url), break_loop=False)

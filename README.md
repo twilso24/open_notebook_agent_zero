@@ -1,20 +1,33 @@
 # Open Notebook Plugin for Agent Zero
 
-A comprehensive knowledge management plugin that integrates [Open Notebook](https://github.com/Open-Notebook) into Agent Zero's WebUI, providing AI-powered notebooks, source management, session-based chat, podcast generation, and more — all from a sidebar panel.
+A knowledge management plugin that integrates [Open Notebook](https://github.com/lfnovo/open_notebook) into Agent Zero's WebUI, providing notebooks, source management, name-based fuzzy lookup, notes, and podcast generation — all from a sidebar panel.
 
 ## Features
 
 ### Notebooks
-- Browse, create, rename, and delete notebooks
+- Browse notebooks and inspect notebook details
 - Name-based source and note lookup
-- Notebook-scoped AI chat with session history
+- Notebook-scoped workflows for browsing, adding, and querying content
 
 ### Sources
-- Import by **URL**, **text**, or **file upload**
+- Import by **URL**, **text**, or **local file path**
 - View processing status with colored badges
 - Retry failed source processing
-- AI-powered source insights with one-click save to notes
 - Delete sources from the panel
+
+#### Supported Local File Types
+When using the `opennotebook_sources:add` tool, local files with the following extensions are automatically detected, read, and uploaded as text:
+
+| Category | Extensions |
+|----------|------------|
+| Documents | `.pdf`, `.doc`, `.docx`, `.odt`, `.rtf`, `.epub` |
+| Text & Web | `.txt`, `.md`, `.html`, `.htm` |
+| Data | `.csv` |
+
+**Behavior:**
+- Content is read from the local filesystem and uploaded to the Open Notebook backend.
+- The title defaults to the filename if one is not provided.
+- Errors (e.g., permission denied, file not found) return actionable guidance.
 
 ### AI Chat
 - **Notebook chat** — session-based conversations scoped to a notebook
@@ -25,7 +38,6 @@ A comprehensive knowledge management plugin that integrates [Open Notebook](http
 ### Notes
 - Full CRUD: create, read, edit, delete
 - Inline editing with save/cancel
-- Save AI insights as notes in one click
 
 ### Podcasts
 - Generate podcasts per notebook with profile selection
@@ -47,11 +59,11 @@ A comprehensive knowledge management plugin that integrates [Open Notebook](http
 ```
 Agent Zero WebUI
 ├── Sidebar Extension Point
-│   └── open-notebook-sidebar.html  (Alpine.js templates)
+│   └── open_notebook-sidebar.html  (Alpine.js templates)
 ├── Page Head Extension Point
-│   └── open-notebook-head.html     (CSS styles)
+│   └── open_notebook-head.html     (CSS styles)
 └── Plugin Static Files
-    ├── webui/open-notebook-store.js (Alpine.js store)
+    ├── webui/open_notebook-store.js (Alpine.js store)
     └── extensions/webui/
         ├── sidebar-end/             (HTML + store source)
         └── page-head/               (CSS source)
@@ -68,18 +80,18 @@ Open Notebook API (port 5055)
 ## File Structure
 
 ```
-/a0/usr/plugins/open-notebook/
+/a0/usr/plugins/open_notebook/
 ├── README.md
-├── plugin.json
+├── plugin.yaml
 ├── webui/
-│   └── open-notebook-store.js       (Alpine.js store, served to browser)
+│   └── open_notebook-store.js       (Alpine.js store, served to browser)
 ├── extensions/
 │   └── webui/
 │       ├── sidebar-end/
-│       │   ├── open-notebook-sidebar.html  (HTML templates)
-│       │   └── open-notebook-store.js      (store source, must stay in sync)
+│       │   ├── open_notebook-sidebar.html  (HTML templates)
+│       │   └── open_notebook-store.js      (store source, must stay in sync)
 │       └── page-head/
-│           └── open-notebook-head.html     (CSS styles)
+│           └── open_notebook-head.html     (CSS styles)
 ├── tools/
 │   ├── open_notebook_browse.py      (notebook/source browsing)
 │   ├── open_notebook_podcast.py     (podcast generation)
@@ -92,24 +104,28 @@ Open Notebook API (port 5055)
 - **Agent Zero** running with WebUI enabled
 - **Open Notebook** backend on port 5055
 - **Open Notebook** UI on port 8502 (optional, for standalone use)
-- **cloudflared** (optional, for direct tunnel access from remote browsers)
+
+## Installation
+
+1. Place this folder at `/a0/usr/plugins/open_notebook` inside the Agent Zero installation.
+2. Ensure `plugin.yaml` and the bundled webui assets are present.
+3. Restart or reload Agent Zero so the plugin can be discovered.
+4. Confirm the Open Notebook backend is reachable on port 5055 (or set `OPEN_NOTEBOOK_API_URL`).
+
 
 ## Connection & Configuration
 
-The store dynamically discovers the backend at runtime — no hardcoded URLs.
+The WebUI dynamically discovers the backend at runtime. Python tools use the plugin `api_url` setting (with environment override support) as the backend default.
 
 | Environment | Method | URL |
 |---|---|---|
 | Browser (local) | Direct connect | `http://localhost:5055` |
-| Browser (remote) | A0 proxy | `/api/plugins/open-notebook/proxy` |
-| Browser (tunnel) | Cloudflare tunnel | `https://*.trycloudflare.com` |
+| Browser (remote) | A0 proxy | `/api/plugins/open_notebook/proxy` |
 | Docker (server-side) | Direct | `http://host.docker.internal:5055` |
 
 ### Detection Flow (on page load)
-1. Check for active cloudflare tunnel URL via `/api/plugins/open-notebook/tunnel`
-2. If remote + no tunnel: auto-start cloudflare tunnel (if cloudflared available)
-3. If local: try direct `localhost:5055` connection
-4. Fall back to A0 proxy mode (routes through `/api/plugins/open-notebook/proxy`)
+1. If local: try direct `localhost:5055` connection
+2. Fall back to A0 proxy mode (routes through `/api/plugins/open_notebook/proxy`)
 
 ## Service Worker Caching
 
@@ -198,8 +214,8 @@ Cache version: `a0-static-v1` — bump in `/a0/webui/sw.js` to bust cache.
 ### Dual-Path Deployment
 
 The store must exist at two paths and stay in sync:
-- `extensions/webui/sidebar-end/open-notebook-store.js` (source)
-- `webui/open-notebook-store.js` (served to browser)
+- `extensions/webui/sidebar-end/open_notebook-store.js` (source)
+- `webui/open_notebook-store.js` (served to browser)
 
 
 ### Connection Detection
@@ -207,8 +223,8 @@ The store uses `isLocalAccess()` to check if the browser is on localhost. Remote
 
 ### Store Sync
 Both store copies must stay in sync:
-- `webui/open-notebook-store.js` (served to browser)
-- `extensions/webui/sidebar-end/open-notebook-store.js` (source)
+- `webui/open_notebook-store.js` (served to browser)
+- `extensions/webui/sidebar-end/open_notebook-store.js` (source)
 
 After any change: `cp extensions/.../store.js webui/store.js`
 
@@ -247,4 +263,4 @@ Use `String.fromCharCode(10)` for newline splitting in SSE parsing.
 | API Endpoints | 25+ |
 | CSS Classes | 60+ |
 | Pre-cached Assets | ~25 |
-| Connection Modes | 3 (direct, tunnel, proxy) |
+| Connection Modes | 2 (direct, proxy) |

@@ -4,10 +4,10 @@ Proxies all requests from the frontend through Agent Zero's API port
 so remote clients can reach the Open Notebook backend without
 direct access to localhost:5055.
 
-Frontend calls: POST /api/plugins/open-notebook/proxy
+Frontend calls: POST /api/plugins/open_notebook/proxy
 Body: { "method": "GET", "path": "/api/notebooks", "body": null, "headers": {} }
 
-GET mode (for audio/binary): /api/plugins/open-notebook/proxy?__audio=1&path=/api/podcasts/episodes/.../audio
+GET mode (for audio/binary): /api/plugins/open_notebook/proxy?__audio=1&path=/api/podcasts/episodes/.../audio
 """
 
 import json as json_mod

@@ -1,5 +1,5 @@
 ---
-name: open-notebook-research
+name: open_notebook-research
 description: >
   Query and research your Open Notebook knowledge base using name-based
   lookup with fuzzy matching.
@@ -45,6 +45,8 @@ Finds a specific source or note by name within a notebook. Uses fuzzy matching.
 2. `opennotebook_query:find` → look up items by name
 3. `opennotebook_sources:read` → read full source content if needed
 4. `opennotebook_notes:create` → save findings as a note
+
+**Note:** If you add new sources during research using `opennotebook_sources:add`, it supports **local file auto-detection** (e.g., passing a path like `/path/to/report.pdf` will read and upload the content). See the main **open_notebook** skill for full details on supported file types.
 
 ## Cross-Tool Navigation
 

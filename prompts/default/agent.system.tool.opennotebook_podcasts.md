@@ -12,7 +12,7 @@ podcast episode generation and management
 - `job_id` (for status)
 - `confirmed` ("true"/"false")
 
-⚠️ **This is an async workflow.** Use the `open-notebook-podcast` skill for the full guided workflow including polling strategy and timing estimates.
+⚠️ **This is an async workflow.** Use the `open_notebook-podcast` skill for the full guided workflow including polling strategy and timing estimates.
 
 usage:
 ~~~json

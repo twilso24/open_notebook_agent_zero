@@ -8,7 +8,7 @@ All tools import from this module — never access config directly.
 from agent import Agent
 from helpers import plugins
 
-PLUGIN_NAME = "open-notebook"
+PLUGIN_NAME = "open_notebook"
 
 
 def _get_config(agent: Agent) -> dict:
@@ -18,9 +18,19 @@ def _get_config(agent: Agent) -> dict:
 
 def get_api_url(agent: Agent) -> str:
     """Get the configured Open Notebook API URL."""
-    return _get_config(agent).get(
-        "api_url", "http://host.docker.internal:5055"
-    )
+    cfg = _get_config(agent)
+    api_url = cfg.get("api_url")
+    if api_url:
+        return api_url
+
+    import os
+    env_url = os.environ.get("OPEN_NOTEBOOK_API_URL")
+    if env_url:
+        return env_url
+
+    # Default to localhost for local/container-native setups; Docker Desktop users
+    # can override via config or OPEN_NOTEBOOK_API_URL.
+    return "http://localhost:5055"
 
 
 def is_read_only(agent: Agent) -> bool:

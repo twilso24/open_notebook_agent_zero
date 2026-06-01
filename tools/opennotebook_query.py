@@ -8,8 +8,8 @@ Methods:
              Uses fuzzy name matching for flexible lookups.
 
 Usage:
-    First use `opennotebook_browse:notebooks` to get a notebook ID,
-    then use `opennotebook_query:find` to locate specific items by name.
+    First use `opennotebook_browse:notebooks` to get a notebook ID or name,
+    then use `opennotebook_query:find` to locate specific items by name within that notebook.
 """
 
 from helpers.tool import Tool, Response

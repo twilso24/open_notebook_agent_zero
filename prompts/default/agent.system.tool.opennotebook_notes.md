@@ -10,7 +10,7 @@ manage notes in your Open Notebook knowledge base
 - `delete` — Remove a note. Requires confirmation if confirmations are enabled.
 
 **Parameters:**
-- `notebook_id` (string, required for list/create) — The notebook to work with
+- `notebook_id` (string, required for list/create) — The notebook to work with; notebook names may be accepted when the tool resolves them internally
 - `note_id` (string, required for read/update/delete) — The note ID
 - `title` (string, optional) — Note title
 - `content` (string, required for create, optional for update) — Note body content

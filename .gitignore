@@ -1,7 +1,3 @@
-__pycache__/
-*.py[cod]
-*.bak*
 execute_record.json
-.DS_Store
-.env
-.env.*
+__pycache__/
+*.pyc

@@ -1,7 +1,11 @@
-name: open-notebook
+name: open_notebook
 title: Open Notebook
-description: Bridge to Open Notebook personal knowledge management system. Browse notebooks, manage sources, query knowledge, and create notes through conversational AI.
+description: Bridge to Open Notebook personal knowledge management system. Browse notebooks, manage sources, perform name-based fuzzy lookup, and create notes through conversational AI.
 version: 0.1.0
+author: Agent Zero Community
+license: MIT
+repository: https://github.com/twilso24/open_notebook_agent_zero
+homepage: https://github.com/twilso24/open_notebook_agent_zero
 per_project_config: true
 per_agent_config: false
 always_enabled: true

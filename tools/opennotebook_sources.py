@@ -12,7 +12,7 @@ Methods:
     delete — Remove a source permanently (with optional confirmation gate)
 
 Usage:
-    First use `opennotebook_browse:notebooks` to get a notebook ID,
+    First use `opennotebook_browse:notebooks` to get a notebook ID or name,
     then use `opennotebook_sources:list` to see sources in that notebook.
     Add sources with `opennotebook_sources:add`, then use
     `opennotebook_query:find` to locate specific items by name.
@@ -36,7 +36,7 @@ import config
 import client
 import errors
 sys.modules.pop('shared', None)
-from shared import format_date, format_status, get_asset_type, handle_error
+from shared import format_date, format_status, get_asset_type, handle_error, prepare_content_for_backend
 
 # Limits for display — prevents overwhelming output
 _MAX_SOURCES = 20
@@ -50,19 +50,30 @@ def _detect_and_prepare(content: str, title: str, notebook_id: str) -> tuple:
     """Auto-detect source type from content and build form-encoded request data.
 
     Detection logic:
+        - Local file path (with known extension) → read file locally, then process
         - URL (http:// or https://) → type 'link', sets 'url' field
-        - File path with known extension → type 'text', sets 'content' field
         - Everything else → type 'text', sets 'content' field (raw text)
 
     Args:
-        content: The raw content string (URL, file path, or text).
+        content: The raw content string (URL, file path, or raw text).
         title: Optional title for the source (may be empty string).
         notebook_id: Target notebook ID.
 
     Returns:
         tuple: (source_type_string, request_data_dict) where request_data_dict
                is suitable for the ``data=`` parameter of httpx.post (form-encoded).
+
+    Raises:
+        ValueError: If content looks like a local file path but cannot be read.
     """
+    # First, detect and read local file content if applicable
+    # This matches the pattern used in notes and podcasts tools
+    try:
+        content = prepare_content_for_backend(content)
+    except ValueError:
+        # Let this propagate up - it's a user-facing error for invalid file paths
+        raise
+
     # Build base data dict with required fields
     # embed='true' triggers automatic vector embedding after processing
     # async_processing='true' so the source add returns immediately
@@ -73,24 +84,17 @@ def _detect_and_prepare(content: str, title: str, notebook_id: str) -> tuple:
         "async_processing": "true",
     }
 
-    # Detect source type from content
+    # Detect source type from content (after file reading)
     lower_content = content.lower()
     if lower_content.startswith(("http://", "https://")):
         source_type = "link"
         request_data["type"] = "link"
         request_data["url"] = content
     else:
-        # Check if content looks like a file path with a known extension
-        import os
-        _, ext = os.path.splitext(content)
-        if ext.lower() in _FILE_EXTENSIONS:
-            source_type = "text"
-            request_data["type"] = "text"
-            request_data["content"] = content  # file path reference
-        else:
-            source_type = "text"
-            request_data["type"] = "text"
-            request_data["content"] = content  # raw text
+        # Treat as raw text content (or file content that was read)
+        source_type = "text"
+        request_data["type"] = "text"
+        request_data["content"] = content
 
     return source_type, request_data
 
@@ -116,21 +120,53 @@ class OpenNotebookSources(Tool):
                     from shared import resolve_notebook_id
                     notebook_id = await resolve_notebook_id(self.agent, notebook_id)
                 except ValueError as e:
-                    return Response(message=f"❌ **{e}**", break_loop=False)
+                    return Response(
+                        message=(
+                            f"❌ **{e}**\n"
+                            "💡 **Hint:** If this notebook doesn't exist, you can create it using "
+                            "`opennotebook_manage:create` with a `title` parameter."
+                        ),
+                        break_loop=False
+                    )
             return await self._list(notebook_id)
         elif method == "add":
             # Add a new source — auto-detects type from content (URL, file, text)
             notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
+            create_if_missing = str(kwargs.get("create_if_missing", "false")).lower() == "true"
             if notebook_id:
                 try:
                     sys.modules.pop('shared', None)
                     from shared import resolve_notebook_id
                     notebook_id = await resolve_notebook_id(self.agent, notebook_id)
                 except ValueError as e:
-                    return Response(message=f"❌ **{e}**", break_loop=False)
+                    if create_if_missing:
+                        # Auto-create notebook if not found and create_if_missing is true
+                        creation_result = await self._create_notebook_if_missing(notebook_id, kwargs)
+                        # If the helper returned a Response (confirmation/error), return it immediately
+                        if isinstance(creation_result, Response):
+                            return creation_result
+                        # Otherwise, creation_result should be the new notebook ID
+                        notebook_id = creation_result
+                        if not notebook_id:
+                            # Creation failed or was cancelled, return early
+                            return Response(
+                                message="Notebook creation failed or was cancelled. Please try again.",
+                                break_loop=False
+                            )
+                    else:
+                        # Original error message when create_if_missing is false
+                        return Response(
+                            message=(
+                                f"❌ **{e}**\n"
+                                "💡 **Hint:** If this notebook doesn't exist, you can create it using "
+                                "`opennotebook_manage:create` with a `title` parameter, or use "
+                                "`create_if_missing: true` to auto-create it."
+                            ),
+                            break_loop=False
+                        )
             content = kwargs.get("content", "") or kwargs.get("url", "")
             title = kwargs.get("title", "")
-            confirmed = kwargs.get("confirmed", "false").lower() == "true"
+            confirmed = str(kwargs.get("confirmed", "false")).lower() == "true"
             return await self._add(notebook_id, content, title, confirmed)
         elif method == "read":
             # Read full source content — requires source_id
@@ -140,7 +176,7 @@ class OpenNotebookSources(Tool):
         elif method == "delete":
             # Delete a source permanently — requires source_id, optional confirmation
             source_id = kwargs.get("source_id", "")
-            confirmed = kwargs.get("confirmed", "false").lower() == "true"
+            confirmed = str(kwargs.get("confirmed", "false")).lower() == "true"
             return await self._delete(source_id, confirmed)
         else:
             return Response(
@@ -273,8 +309,17 @@ class OpenNotebookSources(Tool):
                 break_loop=False,
             )
 
+        # Detect and read local file content if content looks like a file path
+        # This matches the pattern used in notes and podcasts tools
+        try:
+            content = prepare_content_for_backend(content.strip())
+        except ValueError as e:
+            return Response(
+                message=f"❌ **Error processing content:** {str(e)}",
+                break_loop=False
+            )
+
         # Auto-detect content type and prepare request data
-        content = content.strip()
         source_type, request_data = _detect_and_prepare(content, title, notebook_id)
 
         # Confirmation gate — show detected type and content preview before adding
@@ -681,3 +726,60 @@ class OpenNotebookSources(Tool):
             # Never fail the add operation — just note the insight failure
             error_msg = str(e)[:200]
             return f"⚠️ **Insight generation failed:** {error_msg}"
+
+    async def _create_notebook_if_missing(self, notebook_name: str, **kwargs):
+        """Create a notebook if it doesn't exist, following safety patterns.
+
+        Args:
+            notebook_name: Name/ID for the notebook to create.
+            **kwargs: Original kwargs to extract confirmation flags.
+
+        Returns:
+            Union[Response, str]: Response for confirmation/error, or str notebook ID on success.
+        """
+        # Safety Check 1: Read-Only Mode
+        if config.is_read_only(self.agent):
+            return Response(
+                message=(
+                    "⚠️ **Plugin is in read-only mode.** Cannot auto-create notebooks.\n"
+                    "Use `opennotebook_config:settings` to check or change read-only mode."
+                ),
+                break_loop=False
+            )
+
+        # Extract confirmation flag from kwargs
+        confirmed = str(kwargs.get("confirmed", "false")).lower() == "true"
+
+        # Safety Check 2: Confirmation Gate
+        if config.needs_confirmation(self.agent) and not confirmed:
+            return Response(
+                message=(
+                    f"⚠️ **Confirm auto-creating notebook**\n"
+                    f"\n| Detail | Value |"
+                    f"\n|--------|-------|"
+                    f"\n| Name | `{notebook_name}` |"
+                    f"\n| Description | Auto-created by source-add workflow |"
+                    f"\n\nTo confirm, call again with `confirmed: true`."
+                ),
+                break_loop=False
+            )
+
+        # Create notebook via API call
+        api_url = config.get_api_url(self.agent)
+        url = f"{api_url}/api/notebooks"
+
+        try:
+            http_client = await client.get_client()
+            response = await http_client.post(url, json={
+                "name": notebook_name,
+                "description": "Auto-created by source-add workflow"
+            })
+            response.raise_for_status()
+            data = response.json()
+            notebook_id = data.get("id", "unknown")
+            return notebook_id
+        except Exception as e:
+            return Response(
+                message=f"❌ **Failed to create notebook:** {str(e)}",
+                break_loop=False
+            )

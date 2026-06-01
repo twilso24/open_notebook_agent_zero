@@ -1,26 +1,11 @@
 import { createStore } from "/js/AlpineStore.js";
 
-// ── Dynamic tunnel discovery ──────────────────────────────────
-// No hardcoded URLs — discovered at runtime from the tunnel API.
-// Falls back to localhost:5055 (local) or A0 proxy (remote).
-let API_BASE = "http://localhost:5055";
-let UI_BASE = "http://localhost:8502";
-let _useProxy = false;
-let _tunnelUrl = null;
-let _connectionStatus = "detecting"; // "direct" | "tunnel" | "proxy" | "detecting"
-
-// ── Remote-compatible proxy fetch ──
+// ── Proxy-based API communication ─────────────────────────────
+// All requests go through the A0 proxy for secure access.
 let _callJsonApi = null;
 async function getApi() {
     if (!_callJsonApi) { const m = await import("/js/api.js"); _callJsonApi = m.callJsonApi; }
     return _callJsonApi;
-}
-
-function isLocalAccess() {
-    try {
-        const h = window.location.hostname;
-        return h === "localhost" || h === "127.0.0.1" || h === "[::1]";
-    } catch(e) { return false; }
 }
 
 async function proxyFetch(path, options = {}) {
@@ -36,7 +21,7 @@ async function proxyFetch(path, options = {}) {
         if (typeof h === "object") Object.assign(headers, h);
     }
     const fn = await getApi();
-    const result = await fn("plugins/open-notebook/proxy", {
+    const result = await fn("plugins/open_notebook/proxy", {
         method: method,
         path: path,
         body: body,
@@ -49,111 +34,14 @@ async function proxyFetch(path, options = {}) {
     return { ok: true, status: 200, json: () => Promise.resolve(result), data: result };
 }
 
-// Discover tunnel URL from the API, auto-start if needed, then verify connectivity
-async function detectConnectionMode() {
-    const local = isLocalAccess();
-    const fn = await getApi();
-
-    // ── Step 1: Check for existing tunnel ──
-    try {
-        const tunnelInfo = await fn("plugins/open-notebook/tunnel", {});
-        if (tunnelInfo && tunnelInfo.tunnel_url) {
-            _tunnelUrl = tunnelInfo.tunnel_url;
-            API_BASE = _tunnelUrl;
-            UI_BASE = _tunnelUrl;
-            // Verify tunnel is reachable
-            try {
-                const resp = await fetch(API_BASE + "/api/notebooks", { signal: AbortSignal.timeout(4000) });
-                if (resp.ok) {
-                    _useProxy = false;
-                    _connectionStatus = "tunnel";
-                    console.info("[Open Notebook] Connected via tunnel:", _tunnelUrl);
-                    return;
-                }
-            } catch(e) {
-                console.info("[Open Notebook] Tunnel URL found but not reachable, falling back.");
-            }
-        }
-    } catch(e) {
-        console.info("[Open Notebook] Tunnel API unavailable.");
-    }
-
-    // ── Step 2: If remote, try auto-starting tunnel ──
-    if (!local && !_tunnelUrl) {
-        try {
-            const startResult = await fn("plugins/open-notebook/tunnel", { action: "start" });
-            if (startResult && startResult.ok && startResult.tunnel_url) {
-                _tunnelUrl = startResult.tunnel_url;
-                API_BASE = _tunnelUrl;
-                UI_BASE = _tunnelUrl;
-                // Verify the auto-started tunnel
-                try {
-                    const resp = await fetch(API_BASE + "/api/notebooks", { signal: AbortSignal.timeout(4000) });
-                    if (resp.ok) {
-                        _useProxy = false;
-                        _connectionStatus = "tunnel";
-                        console.info("[Open Notebook] Auto-started tunnel:", _tunnelUrl);
-                        return;
-                    }
-                } catch(e) {}
-            }
-        } catch(e) {
-            console.info("[Open Notebook] Tunnel auto-start not available (cloudflared may not be installed).");
-        }
-    }
-
-    // ── Step 3: Try direct localhost connection (local access only) ──
-    if (local) {
-        try {
-            const resp = await fetch(API_BASE + "/api/notebooks", { signal: AbortSignal.timeout(3000) });
-            if (resp.ok) {
-                _useProxy = false;
-                _connectionStatus = "direct";
-                console.info("[Open Notebook] Connected directly:", API_BASE);
-                return;
-            }
-        } catch(e) {
-            // Expected when backend not running locally — not an error
-        }
-    }
-
-    // ── Step 4: Fall back to A0 proxy (works for both local and remote) ──
-    _useProxy = true;
-    _connectionStatus = "proxy";
-    console.info("[Open Notebook] Using A0 proxy mode.", local ? "(localhost unreachable)" : "(remote access)");
-}
-let _detectionPromise = detectConnectionMode();
-
 async function smartFetch(path, options = {}) {
-    // Wait for connection detection to finish before making any request
-    if (_detectionPromise) await _detectionPromise;
-    if (_useProxy) {
-        return proxyFetch(path, options);
-    }
-    const url = API_BASE + path;
-    const isFormData = (typeof FormData !== 'undefined' && options.body instanceof FormData);
-    const headers = isFormData ? (options.headers || {}) : { "Content-Type": "application/json", ...(options.headers || {}) };
-    const fetchOpts = { ...options, headers };
-    const resp = await fetch(url, fetchOpts);
-    if (!resp.ok) {
-        let detail = '';
-        try { detail = await resp.text(); } catch(e) {}
-        throw new Error(`HTTP ${resp.status}: ${detail || resp.statusText}`);
-    }
-    return resp;
+    return proxyFetch(path, options);
 }
-
-
 
 async function getAudioUrl(path) {
-    // Wait for connection detection to finish
-    if (_detectionPromise) await _detectionPromise;
-    if (_useProxy) {
-        // For audio, we need to route through the proxy with binary support
-        // Use a direct proxy path that streams the audio
-        return `/api/plugins/open-notebook/proxy?__audio=1&path=${encodeURIComponent(path)}`;
-    }
-    return API_BASE + path;
+    // For audio, we need to route through the proxy with binary support
+    // Use a direct proxy path that streams the audio
+    return `/api/plugins/open_notebook/proxy?__audio=1&path=${encodeURIComponent(path)}`;
 }
 
 let _notebooksLoaded = false;
@@ -1454,29 +1342,7 @@ const model = {
     },
 
 
-    // ── Open in Browser ────────────────────────────────────
-    async openNotebookUI(path) {
-        // Remote/tunnel mode: sidebar panel IS the UI
-        if (_useProxy || _tunnelUrl) {
-            try {
-                const fn = await getApi();
-                fn("plugins/open-notebook/tunnel", { action: "toast", message: "💡 The full Open Notebook UI is available right here in the sidebar panel. The separate Streamlit UI requires local network access (port 8502)." });
-            } catch(e) {}
-            return;
-        }
 
-        // Local mode: try to reach Streamlit UI on port 8502
-        const uiBase = "http://" + location.hostname + ":8502";
-        try {
-            await fetch(uiBase, { mode: "no-cors", signal: AbortSignal.timeout(2000) });
-            const url = path ? `${uiBase}/${path}` : uiBase;
-            window.open(url, '_blank');
-        } catch(e) {
-            // Streamlit UI not reachable — open API docs instead
-            const url = path ? `${API_BASE}/${path}` : API_BASE;
-            window.open(url, '_blank');
-        }
-    },
 
     // ── Refresh ────────────────────────────────────────────
     async refreshCurrentTab() {
@@ -1565,7 +1431,7 @@ const model = {
         // Get canvas store directly at call time (avoids timing issues)
         const canvas = window.Alpine?.store?.('rightCanvas');
         if (canvas && canvas.open) {
-            canvas.open('open-notebook');
+            canvas.open('open_notebook');
         }
     },
     

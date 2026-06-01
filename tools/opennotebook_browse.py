@@ -6,7 +6,7 @@ Use this tool to explore what notebooks exist and what they contain.
 
 Methods:
     notebooks — List all notebooks (table view)
-    notebook  — Get details for a single notebook by ID
+    notebook  — Get details for a single notebook by ID or name when supported
     tree      — Show hierarchical overview of all notebooks
 """
 
@@ -115,10 +115,11 @@ class OpenNotebookBrowse(Tool):
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _notebook(self, notebook_id: str) -> Response:
-        """Get details for a specific notebook by ID.
+        """Get details for a specific notebook by ID or name.
 
         Returns a key-value table with notebook metadata including
-        source/note counts, dates, and archive status.
+        source/note counts, dates, and archive status. Notebook lookup is
+        resolved through the shared notebook resolver for consistent behavior.
         """
         # Validate required parameter
         if not notebook_id:
@@ -131,33 +132,23 @@ class OpenNotebookBrowse(Tool):
                 break_loop=False,
             )
 
-        # Name-based lookup: if the value doesn't look like an ID, search by name
-        if not notebook_id.startswith("notebook:"):
-            try:
-                api_url = config.get_api_url(self.agent)
-                list_url = f"{api_url}/api/notebooks"
-                http_client = await client.get_client()
-                list_response = await http_client.get(list_url)
-                list_response.raise_for_status()
-                all_notebooks = list_response.json()
-                # Case-insensitive substring match on name (strip emoji)
-                import re
-                search_term = notebook_id.lower()
-                for nb in all_notebooks:
-                    clean_name = re.sub(r'[\U00010000-\U0010ffff]', '', nb.get('name', '')).strip().lower()
-                    if search_term in clean_name or clean_name in search_term:
-                        notebook_id = nb.get('id', '')
-                        break
-                else:
-                    return Response(
-                        message=(
-                            f"❌ **No notebook found matching '{notebook_id}'.**\n"
-                            "Use `opennotebook_browse:notebooks` to see all available notebooks."
-                        ),
-                        break_loop=False,
-                    )
-            except Exception as e:
-                return Response(message=handle_error(e, list_url), break_loop=False)
+        # Resolve notebook names / partial IDs through the shared helper for consistent behavior
+        try:
+            sys.modules.pop('shared', None)
+            from shared import resolve_notebook_id
+            notebook_id = await resolve_notebook_id(self.agent, notebook_id)
+        except ValueError as e:
+            return Response(
+                message=(
+                    f"❌ **{e}**\n"
+                    "💡 **Hint:** Use `opennotebook_browse:notebooks` to see all available notebooks, "
+                    "or `opennotebook_manage:create` to create a new one."
+                ),
+                break_loop=False
+            )
+        except Exception as e:
+            api_url = config.get_api_url(self.agent)
+            return Response(message=handle_error(e, f"{api_url}/api/notebooks"), break_loop=False)
 
         api_url = config.get_api_url(self.agent)
         url = f"{api_url}/api/notebooks/{notebook_id}"

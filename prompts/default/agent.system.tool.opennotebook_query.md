@@ -5,7 +5,7 @@ look up sources and notes by name
 
 **Key params:**
 - `name` (string) — item name to locate
-- `notebook_id` (string) — scope to notebook (required)
+- `notebook_id` (string) — scope to notebook (required, but notebook names may be accepted when the tool resolves them internally)
 
 usage:
 ~~~json

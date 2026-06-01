@@ -28,11 +28,11 @@ export default async function registerOpenNotebookSurface(canvas) {
     }
 
     canvas.registerSurface({
-        id: 'open-notebook',
+        id: 'open_notebook',
         title: 'Open Notebook',
         icon: 'menu_book',
         order: 50,
-        modalPath: '/plugins/open-notebook/webui/canvas-panel.html?v=20260529',
+        modalPath: '/plugins/open_notebook/webui/canvas-panel.html?v=20260529',
         async open(payload = {}) {
             const s = getStore();
             if (s) {

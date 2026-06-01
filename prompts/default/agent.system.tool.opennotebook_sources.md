@@ -9,7 +9,7 @@ manage research sources in Open Notebook notebooks
 - `delete` — Remove a source from Open Notebook. Requires confirmation if confirmations are enabled.
 
 **Parameters:**
-- `notebook_id` (string, required for list/add) — The notebook to work with
+- `notebook_id` (string, required for list/add) — The notebook to work with; notebook names may be accepted when the tool resolves them
 - `source_id` (string, required for read/delete) — The source ID
 - `content` (string, required for add) — URL, file path, or text content to add
 - `title` (string, optional for add) — Custom title for the source

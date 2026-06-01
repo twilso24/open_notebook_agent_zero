@@ -4,12 +4,12 @@
     html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
   </style>
   <script type="module">
-    import { store } from "/plugins/open-notebook/webui/open-notebook-store.js";
+    import { store } from "/plugins/open_notebook/webui/open_notebook-store.js";
   </script>
 </head>
 <body>
 
-<div id="on-canvas-panel" class="on-canvas-content" data-surface-id="open-notebook">
+<div id="on-canvas-panel" class="on-canvas-content" data-surface-id="open_notebook">
 
     <!-- Loading Overlay -->
     <div class="on-loading" x-show="&#36;store.openNotebookStore?.loading" style="display:none">
@@ -35,9 +35,7 @@
                     class="on-btn on-btn--ghost" @click="&#36;store.openNotebookStore?.refreshCurrentTab()" title="Refresh">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
             </button>
-            <button class="on-btn on-btn--ghost" @click="&#36;store.openNotebookStore?.openNotebookUI()" title="Open in browser">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-            </button>
+
             <button class="on-btn on-btn--ghost" @click="&#36;store.openNotebookStore?.closeViaCanvas()" title="Close">✕</button>
         </div>
     </div>

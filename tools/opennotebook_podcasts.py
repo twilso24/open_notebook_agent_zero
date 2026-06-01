@@ -22,7 +22,7 @@ import config
 import client
 import errors
 sys.modules.pop('shared', None)
-from shared import format_date, format_status, get_asset_type, handle_error
+from shared import format_date, format_status, get_asset_type, handle_error, prepare_content_for_backend
 
 # Limits
 _MAX_EPISODES = 20
@@ -44,7 +44,7 @@ class OpenNotebookPodcasts(Tool):
             content = kwargs.get("content", "")
             notebook_id = kwargs.get("notebook_id", "")
             briefing_suffix = kwargs.get("briefing_suffix", "")
-            confirmed = kwargs.get("confirmed", "false").lower() == "true"
+            confirmed = str(kwargs.get("confirmed", "false")).lower() == "true"
             return await self._generate(
                 episode_profile, speaker_profile, episode_name,
                 content, notebook_id, briefing_suffix, confirmed,
@@ -54,11 +54,11 @@ class OpenNotebookPodcasts(Tool):
             return await self._status(job_id)
         elif method == "retry":
             episode_id = kwargs.get("episode_id", "")
-            confirmed = kwargs.get("confirmed", "false").lower() == "true"
+            confirmed = str(kwargs.get("confirmed", "false")).lower() == "true"
             return await self._retry(episode_id, confirmed)
         elif method == "delete":
             episode_id = kwargs.get("episode_id", "")
-            confirmed = kwargs.get("confirmed", "false").lower() == "true"
+            confirmed = str(kwargs.get("confirmed", "false")).lower() == "true"
             return await self._delete(episode_id, confirmed)
         elif method == "profiles":
             return await self._profiles()
@@ -245,6 +245,16 @@ class OpenNotebookPodcasts(Tool):
                 message="⚠️ Plugin is in read-only mode. Cannot generate podcasts.",
                 break_loop=False,
             )
+
+        # Detect and read file content if content looks like a local file path
+        if content:
+            try:
+                content = prepare_content_for_backend(content)
+            except ValueError as e:
+                return Response(
+                    message=f"❌ **Error processing content:** {str(e)}",
+                    break_loop=False
+                )
 
         # Confirmation check
         if config.needs_confirmation(self.agent) and not confirmed:

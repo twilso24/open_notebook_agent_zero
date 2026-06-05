@@ -141,8 +141,12 @@ class OpenNotebookManage(Tool):
             )
 
         # Validate required name parameter
-        name = kwargs.get("name", "")
-        if not name or not name.strip():
+        name = (
+            kwargs.get("name", "")
+            or kwargs.get("title", "")
+            or kwargs.get("notebook_name", "")
+        )
+        if not name or not str(name).strip():
             return Response(
                 message=(
                     "❌ **Notebook name required.**\n"

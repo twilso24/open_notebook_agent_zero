@@ -171,6 +171,10 @@ const model = {
     selectedSourceIds: [],
     selectedNoteIds: [],
     sourceContentMode: 'full',
+    podcastSelectedNotebookId: '',
+    podcastSources: [],
+    podcastNotes: [],
+    podcastNotebookLoading: false,
     generateForm: {
         episode_name: '',
         episode_profile: '',
@@ -1096,26 +1100,55 @@ const model = {
         this.podcastSourceFilter = '';
         this.podcastNoteFilter = '';
         this.sourceContentMode = 'full';
+        this.podcastSources = [];
+        this.podcastNotes = [];
+        this.podcastSelectedNotebookId = '';
         this.loadPodcastProfiles();
-        // Ensure notebook-scoped data is loaded
-        if (this.sources.length === 0) this.loadSources();
-        if (this.notes.length === 0) this.loadNotes();
+        // If inside a notebook, auto-select it
+        if (this.selectedNotebookId) {
+            this.podcastSelectedNotebookId = this.selectedNotebookId;
+            this.onPodcastNotebookChange();
+        }
     },
 
     closePodcastGenerateForm() {
         this.showGenerateForm = false;
     },
 
+    async onPodcastNotebookChange() {
+        if (!this.podcastSelectedNotebookId) {
+            this.podcastSources = [];
+            this.podcastNotes = [];
+            this.selectedSourceIds = [];
+            this.selectedNoteIds = [];
+            return;
+        }
+        this.podcastNotebookLoading = true;
+        this.selectedSourceIds = [];
+        this.selectedNoteIds = [];
+        try {
+            const srcParams = new URLSearchParams({ notebook_id: this.podcastSelectedNotebookId });
+            const srcResp = await smartFetch(`/api/sources?${srcParams}`);
+            if (srcResp.ok) this.podcastSources = await srcResp.json();
+        } catch (e) { this.podcastSources = []; }
+        try {
+            const noteParams = new URLSearchParams({ notebook_id: this.podcastSelectedNotebookId });
+            const noteResp = await smartFetch(`/api/notes?${noteParams}`);
+            if (noteResp.ok) this.podcastNotes = await noteResp.json();
+        } catch (e) { this.podcastNotes = []; }
+        this.podcastNotebookLoading = false;
+    },
+
     get filteredPodcastSources() {
-        if (!this.podcastSourceFilter) return this.sources || [];
+        if (!this.podcastSourceFilter) return this.podcastSources || [];
         const q = this.podcastSourceFilter.toLowerCase();
-        return (this.sources || []).filter(s => (s.title || s.name || '').toLowerCase().includes(q));
+        return (this.podcastSources || []).filter(s => (s.title || s.name || '').toLowerCase().includes(q));
     },
 
     get filteredPodcastNotes() {
-        if (!this.podcastNoteFilter) return this.notes || [];
+        if (!this.podcastNoteFilter) return this.podcastNotes || [];
         const q = this.podcastNoteFilter.toLowerCase();
-        return (this.notes || []).filter(n => (n.title || n.name || '').toLowerCase().includes(q));
+        return (this.podcastNotes || []).filter(n => (n.title || n.name || '').toLowerCase().includes(q));
     },
 
     async generatePodcast() {
@@ -1171,8 +1204,8 @@ const model = {
             if (contentParts.length) {
                 body.content = contentParts.join('\n\n---\n\n');
             }
-            if (this.selectedNotebookId) {
-                body.notebook_id = this.selectedNotebookId;
+            if (this.podcastSelectedNotebookId) {
+                body.notebook_id = this.podcastSelectedNotebookId;
             }
             if (this.generateForm.additional_instructions?.trim()) {
                 body.briefing_suffix = this.generateForm.additional_instructions.trim();

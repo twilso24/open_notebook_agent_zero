@@ -45,12 +45,22 @@
          ============================================================ -->
     <div x-show="!&#36;store.openNotebookStore?.hasNotebookSelected" class="on-scroll">
 
-        <!-- Create Notebook -->
+        <!-- Create Notebook / Generate Podcast -->
         <div style="margin:8px">
+            <div style="display:flex;gap:6px" x-show="!&#36;store.openNotebookStore?.showCreateNotebook && !&#36;store.openNotebookStore?.showGenerateForm">
+                <button class="on-btn on-btn--primary" style="flex:1"
+                        @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.showCreateNotebook = true)">
+                    + New Notebook
+                </button>
+                <button class="on-btn" style="flex:1;background:var(--color-accent);color:white"
+                        @click="&#36;store.openNotebookStore?.openPodcastGenerateForm()">
+                    🎙️ Generate Podcast
+                </button>
+            </div>
             <button class="on-btn on-btn--primary" style="width:100%"
-                    x-show="!&#36;store.openNotebookStore?.showCreateNotebook"
-                    @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.showCreateNotebook = true)">
-                + New Notebook
+                    x-show="!&#36;store.openNotebookStore?.showCreateNotebook && &#36;store.openNotebookStore?.showGenerateForm"
+                    @click="&#36;store.openNotebookStore?.closePodcastGenerateForm()">
+                ✕ Cancel Podcast
             </button>
             <div x-show="&#36;store.openNotebookStore?.showCreateNotebook" x-transition style="display:none">
                 <div style="display:flex;flex-direction:column;gap:8px">
@@ -69,6 +79,101 @@
             </div>
         </div>
 
+        <!-- Podcast Generate Form (home page) -->
+        <div x-show="&#36;store.openNotebookStore?.showGenerateForm && !&#36;store.openNotebookStore?.hasNotebookSelected" x-transition style="display:none;margin:0 8px 8px">
+            <div class="on-card" style="display:flex;flex-direction:column;gap:8px">
+                <div class="on-section-header" style="display:flex;justify-content:space-between;align-items:center">
+                    <span>🎙️ Generate Podcast</span>
+                </div>
+                <input type="text" class="on-journal__input" placeholder="Episode name *"
+                       :value="&#36;store.openNotebookStore?.generateForm?.episode_name || ''"
+                       @input="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.generateForm.episode_name = &#36;event.target.value)">
+                <select style="width:100%;padding:6px 8px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-background);color:var(--color-text);font-size:0.85em"
+                        :value="&#36;store.openNotebookStore?.generateForm?.episode_profile || ''"
+                        @change="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.generateForm.episode_profile = &#36;event.target.value)">
+                    <option value="" disabled>Select episode profile…</option>
+                    <template x-for="p in (&#36;store.openNotebookStore?.episodeProfiles || [])" :key="p.name">
+                        <option :value="p.name" x-text="p.name + ' — ' + (p.description || '')"></option>
+                    </template>
+                </select>
+
+                <!-- Notebook Selector -->
+                <select style="width:100%;padding:6px 8px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-background);color:var(--color-text);font-size:0.85em"
+                        :value="&#36;store.openNotebookStore?.podcastSelectedNotebookId || ''"
+                        @change="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.podcastSelectedNotebookId = &#36;event.target.value, &#36;store.openNotebookStore.onPodcastNotebookChange())">
+                    <option value="" disabled>Select a notebook for sources/notes…</option>
+                    <template x-for="nb in (&#36;store.openNotebookStore?.notebooks || [])" :key="nb.id">
+                        <option :value="nb.id" x-text="nb.name"></option>
+                    </template>
+                </select>
+
+                <!-- Source Content Mode Toggle -->
+                <div x-show="&#36;store.openNotebookStore?.podcastSelectedNotebookId" style="display:none;align-items:center;gap:6px;font-size:0.8em">
+                    <span style="font-weight:600">Content mode:</span>
+                    <button class="on-btn" style="font-size:0.8em;padding:2px 8px"
+                            :style="&#36;store.openNotebookStore?.sourceContentMode === 'full' ? 'background:var(--color-accent);color:white' : ''"
+                            @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.sourceContentMode = 'full')">Full Text</button>
+                    <button class="on-btn" style="font-size:0.8em;padding:2px 8px"
+                            :style="&#36;store.openNotebookStore?.sourceContentMode === 'summary' ? 'background:var(--color-accent);color:white' : ''"
+                            @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.sourceContentMode = 'summary')">Summary (2k chars)</button>
+                </div>
+
+                <!-- Sources Selection -->
+                <div x-show="&#36;store.openNotebookStore?.podcastSelectedNotebookId" style="display:none;border:1px solid var(--color-border);border-radius:8px;padding:6px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                        <span style="font-size:0.8em;font-weight:600">📚 Sources <span x-show="&#36;store.openNotebookStore?.selectedSourceIds?.length" style="color:var(--color-accent)">(<span x-text="&#36;store.openNotebookStore?.selectedSourceIds?.length"></span> selected)</span></span>
+                        <div style="display:flex;gap:4px">
+                            <button class="on-btn on-btn--ghost" style="font-size:0.7em;padding:1px 6px" @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.selectedSourceIds = (&#36;store.openNotebookStore.filteredPodcastSources || []).map(s=>s.id))">All</button>
+                            <button class="on-btn on-btn--ghost" style="font-size:0.7em;padding:1px 6px" @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.selectedSourceIds = [])">None</button>
+                        </div>
+                    </div>
+                    <input type="text" class="on-journal__input" placeholder="Search sources…" style="font-size:0.8em;margin-bottom:4px"
+                           :value="&#36;store.openNotebookStore?.podcastSourceFilter || ''"
+                           @input="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.podcastSourceFilter = &#36;event.target.value)">
+                    <div style="max-height:200px;overflow-y:auto">
+                        <template x-for="src in (&#36;store.openNotebookStore?.filteredPodcastSources || [])" :key="src.id">
+                            <label style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:0.8em;cursor:pointer">
+                                <input type="checkbox" :checked="&#36;store.openNotebookStore?.selectedSourceIds?.includes(src.id)" @change="&#36;store.openNotebookStore?.togglePodcastSource(src.id)">
+                                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" x-text="src.title || src.name || 'Untitled'"></span>
+                            </label>
+                        </template>
+                        <div x-show="&#36;store.openNotebookStore?.podcastNotebookLoading" style="color:var(--color-text-muted);font-size:0.8em;padding:4px">Loading…</div>
+                        <div x-show="!&#36;store.openNotebookStore?.podcastNotebookLoading && !(&#36;store.openNotebookStore?.podcastSources?.length)" style="color:var(--color-text-muted);font-size:0.8em;padding:4px">No sources in this notebook.</div>
+                    </div>
+                </div>
+
+                <!-- Notes Selection -->
+                <div x-show="&#36;store.openNotebookStore?.podcastSelectedNotebookId" style="display:none;border:1px solid var(--color-border);border-radius:8px;padding:6px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                        <span style="font-size:0.8em;font-weight:600">📝 Notes <span x-show="&#36;store.openNotebookStore?.selectedNoteIds?.length" style="color:var(--color-accent)">(<span x-text="&#36;store.openNotebookStore?.selectedNoteIds?.length"></span> selected)</span></span>
+                        <div style="display:flex;gap:4px">
+                            <button class="on-btn on-btn--ghost" style="font-size:0.7em;padding:1px 6px" @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.selectedNoteIds = (&#36;store.openNotebookStore.filteredPodcastNotes || []).map(n=>n.id))">All</button>
+                            <button class="on-btn on-btn--ghost" style="font-size:0.7em;padding:1px 6px" @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.selectedNoteIds = [])">None</button>
+                        </div>
+                    </div>
+                    <input type="text" class="on-journal__input" placeholder="Search notes…" style="font-size:0.8em;margin-bottom:4px"
+                           :value="&#36;store.openNotebookStore?.podcastNoteFilter || ''"
+                           @input="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.podcastNoteFilter = &#36;event.target.value)">
+                    <div style="max-height:200px;overflow-y:auto">
+                        <template x-for="note in (&#36;store.openNotebookStore?.filteredPodcastNotes || [])" :key="note.id">
+                            <label style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:0.8em;cursor:pointer">
+                                <input type="checkbox" :checked="&#36;store.openNotebookStore?.selectedNoteIds?.includes(note.id)" @change="&#36;store.openNotebookStore?.togglePodcastNote(note.id)">
+                                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" x-text="note.title || note.name || 'Untitled'"></span>
+                            </label>
+                        </template>
+                        <div x-show="&#36;store.openNotebookStore?.podcastNotebookLoading" style="color:var(--color-text-muted);font-size:0.8em;padding:4px">Loading…</div>
+                        <div x-show="!&#36;store.openNotebookStore?.podcastNotebookLoading && !(&#36;store.openNotebookStore?.podcastNotes?.length)" style="color:var(--color-text-muted);font-size:0.8em;padding:4px">No notes in this notebook.</div>
+                    </div>
+                </div>
+
+                <textarea class="on-journal__input" placeholder="Additional instructions (optional) — e.g. focus on X, skip Y…" rows="2"
+                          :value="&#36;store.openNotebookStore?.generateForm?.additional_instructions || ''"
+                          @input="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.generateForm.additional_instructions = &#36;event.target.value)"></textarea>
+                <button class="on-btn on-btn--primary" style="width:100%" @click="&#36;store.openNotebookStore?.generatePodcast()">
+                    Generate
+                </button>
+            </div>
+        </div>
 
         <!-- Notebook List -->
         <div class="on-section-header" style="padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Notebooks</span><button class="on-btn on-btn--ghost" @click="$store.openNotebookStore?.loadNotebooks()" title="Refresh notebooks"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button></div>

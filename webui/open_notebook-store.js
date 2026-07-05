@@ -10,9 +10,45 @@ async function getApi() {
 
 async function proxyFetch(path, options = {}) {
     const method = (options.method || "GET").toUpperCase();
-    // FormData uploads are not supported through the JSON proxy
+    // FormData uploads: convert to base64 JSON payload for the proxy upload handler
     if (typeof FormData !== 'undefined' && options.body instanceof FormData) {
-        throw new Error('File uploads are not supported in proxy mode. Connect directly to the server.');
+        const parts = [];
+        for (const [key, value] of options.body.entries()) {
+            if (value instanceof File || value instanceof Blob) {
+                // Read file as base64
+                const buf = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const result = reader.result;
+                        // Strip data URL prefix: "data:*/*;base64,"
+                        resolve(result.indexOf(',') >= 0 ? result.split(',').pop() : result);
+                    };
+                    reader.onerror = () => resolve('');
+                    reader.readAsDataURL(value);
+                });
+                parts.push({
+                    name: key,
+                    type: 'file',
+                    filename: value.name || 'upload',
+                    mime: value.type || 'application/octet-stream',
+                    data: buf,
+                });
+            } else {
+                parts.push({ name: key, type: 'text', value: String(value) });
+            }
+        }
+        const fn = await getApi();
+        const result = await fn("plugins/open_notebook/proxy", {
+            method: method,
+            path: path,
+            body: { __upload: true, parts },
+            headers: options.headers || {},
+        });
+        if (result && result._proxy_status !== undefined) {
+            if (result._proxy_status >= 400) throw new Error(`HTTP ${result._proxy_status}`);
+            return { ok: true, status: result._proxy_status, json: () => Promise.resolve(result.data), data: result.data };
+        }
+        return { ok: true, status: 200, json: () => Promise.resolve(result), data: result };
     }
     const body = options.body ? (typeof options.body === "string" ? JSON.parse(options.body) : options.body) : null;
     const headers = {};

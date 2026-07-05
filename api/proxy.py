@@ -79,6 +79,10 @@ class ProxyHandler(ApiHandler):
         # Build target URL
         target_url = ON_API_URL.rstrip("/") + "/" + path.lstrip("/")
 
+        # Upload mode: body carries base64-encoded multipart parts
+        if isinstance(body, dict) and body.get("__upload"):
+            return await self._handle_upload_proxy(method, target_url, body, extra_headers)
+
         # Build headers
         headers: Dict[str, str] = {
             "Accept": "application/json",
@@ -152,3 +156,84 @@ class ProxyHandler(ApiHandler):
                 status=500,
                 mimetype="application/json",
             )
+ 
+    async def _handle_upload_proxy(self, method: str, target_url: str, body: dict, extra_headers: dict) -> dict | Response:
+         """Handle file uploads by reconstructing multipart/form-data from base64 parts."""
+         import base64
+ 
+         files = []
+         data = {}
+ 
+         for part in body.get("parts", []):
+             name = part.get("name", "")
+             ptype = part.get("type", "text")
+             if ptype == "file":
+                 raw = base64.b64decode(part.get("data", ""))
+                 files.append((
+                     name,
+                     (part.get("filename", "upload"), raw, part.get("mime", "application/octet-stream")),
+                 ))
+             else:
+                 data[name] = str(part.get("value", ""))
+ 
+         headers: Dict[str, str] = {"Accept": "application/json"}
+         headers.update(extra_headers)
+         headers.pop("Content-Type", None)
+ 
+         kwargs: Dict[str, Any] = {
+             "method": method,
+             "url": target_url,
+             "headers": headers,
+             "data": data,
+             "files": files,
+             "timeout": 120.0,
+         }
+ 
+         try:
+             async with httpx.AsyncClient() as client:
+                 resp = await client.request(**kwargs)
+ 
+             content_type = resp.headers.get("content-type", "")
+             if "application/json" in content_type:
+                 try:
+                     resp_data = resp.json()
+                     return Response(
+                         response=json_mod.dumps({
+                             "_proxy_status": resp.status_code,
+                             "_proxy_content_type": content_type,
+                             "data": resp_data,
+                         }),
+                         status=200,
+                         mimetype="application/json",
+                     )
+                 except Exception:
+                     pass
+ 
+             return Response(
+                 response=json_mod.dumps({
+                     "_proxy_status": resp.status_code,
+                     "_proxy_content_type": content_type,
+                     "data": resp.text,
+                 }),
+                 status=200,
+                 mimetype="application/json",
+             )
+ 
+         except httpx.ConnectError:
+             return Response(
+                 response=json_mod.dumps({
+                     "ok": False,
+                     "error": "Open Notebook backend unreachable on " + ON_API_URL,
+                 }),
+                 status=502,
+                 mimetype="application/json",
+             )
+         except Exception as e:
+             return Response(
+                 response=json_mod.dumps({
+                     "ok": False,
+                     "error": f"Upload proxy error: {str(e)}",
+                 }),
+                 status=500,
+                 mimetype="application/json",
+             )

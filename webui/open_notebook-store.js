@@ -138,6 +138,12 @@ const model = {
     sourceChatLoading: false,
     activeSourceChatId: null,
 
+    // Source detail
+    sourceDetail: null,
+    activeSourceDetailId: null,
+    sourceDetailLoading: false,
+    sourceDetailExpanded: false,
+
     // Related sources
     relatedResults: null,
     relatedLoading: false,
@@ -524,6 +530,35 @@ const model = {
         } catch (e) {
             this.error = e.message;
         }
+    },
+
+    // ── Source Detail ───────────────────────────────────
+    async openSourceDetail(sourceId) {
+        this.activeSourceDetailId = sourceId;
+        this.sourceDetailLoading = true;
+        this.sourceDetail = null;
+        this.sourceDetailExpanded = false;
+        this.error = null;
+        try {
+            const resp = await smartFetch(`/api/sources/${encodeURIComponent(sourceId)}`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            this.sourceDetail = await resp.json();
+        } catch (e) {
+            this.error = `Failed to load source detail: ${e.message}`;
+        } finally {
+            this.sourceDetailLoading = false;
+        }
+    },
+
+    closeSourceDetail() {
+        this.sourceDetail = null;
+        this.activeSourceDetailId = null;
+        this.sourceDetailLoading = false;
+        this.sourceDetailExpanded = false;
+    },
+
+    toggleSourceDetailExpanded() {
+        this.sourceDetailExpanded = !this.sourceDetailExpanded;
     },
 
     // ── Source Insights ───────────────────────────────────

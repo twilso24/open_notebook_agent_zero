@@ -212,6 +212,58 @@
                 </div>
             </div>
 
+            <!-- Source Detail Panel -->
+            <div x-show="$store.openNotebookStore?.activeSourceDetailId" x-transition style="display:none;padding:8px 12px">
+                <div class="on-card" style="border-color:var(--color-secondary);display:flex;flex-direction:column;max-height:500px">
+                    <div class="on-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+                        <span>Source Details</span>
+                        <button class="on-btn on-btn--ghost" @click="$store.openNotebookStore?.closeSourceDetail()">✕</button>
+                    </div>
+                    <div style="flex:1;overflow-y:auto;min-height:0;padding:4px 0">
+                        <div x-show="$store.openNotebookStore?.sourceDetailLoading" style="text-align:center;padding:12px">
+                            <span class="on-spinner" style="width:16px;height:16px;border-width:2px"></span>
+                        </div>
+                        <template x-if="$store.openNotebookStore?.sourceDetail">
+                            <div style="display:flex;flex-direction:column;gap:6px">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span class="on-badge" :class="($store.openNotebookStore?.sourceDetail?.type || $store.openNotebookStore?.sourceDetail?.source_type) === 'link' ? 'on-badge--url' : (($store.openNotebookStore?.sourceDetail?.type || $store.openNotebookStore?.sourceDetail?.source_type) === 'text' ? 'on-badge--text' : 'on-badge--file')" x-text="$store.openNotebookStore?.sourceDetail?.type || $store.openNotebookStore?.sourceDetail?.source_type || 'unknown'"></span>
+                                    <span style="flex:1;font-weight:600;font-size:0.95em" x-text="$store.openNotebookStore?.sourceDetail?.title || $store.openNotebookStore?.sourceDetail?.name || 'Untitled'"></span>
+                                </div>
+                                <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:0.82em;color:var(--color-text-muted)">
+                                    <span style="font-weight:500">Status</span>
+                                    <span x-text="$store.openNotebookStore?.sourceDetail?.status || $store.openNotebookStore?.sourceDetail?.embedding_status || 'unknown'"></span>
+                                    <template x-if="$store.openNotebookStore?.sourceDetail?.created_date || $store.openNotebookStore?.sourceDetail?.created">
+                                        <span style="font-weight:500">Created</span>
+                                    </template>
+                                    <template x-if="$store.openNotebookStore?.sourceDetail?.created_date || $store.openNotebookStore?.sourceDetail?.created">
+                                        <span x-text="$store.openNotebookStore?.sourceDetail?.created_date || $store.openNotebookStore?.sourceDetail?.created || ''"></span>
+                                    </template>
+                                    <template x-if="$store.openNotebookStore?.sourceDetail?.url">
+                                        <span style="font-weight:500">URL</span>
+                                    </template>
+                                    <template x-if="$store.openNotebookStore?.sourceDetail?.url">
+                                        <a :href="$store.openNotebookStore?.sourceDetail?.url" target="_blank" style="color:var(--color-accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" x-text="$store.openNotebookStore?.sourceDetail?.url"></a>
+                                    </template>
+                                </div>
+                                <template x-if="$store.openNotebookStore?.sourceDetail?.full_text || $store.openNotebookStore?.sourceDetail?.content || $store.openNotebookStore?.sourceDetail?.text">
+                                    <div style="border-top:1px solid var(--color-border);padding-top:6px;margin-top:4px">
+                                        <button class="on-btn on-btn--ghost" style="font-size:0.82em;padding:2px 8px" @click="$store.openNotebookStore?.toggleSourceDetailExpanded()">
+                                            <span x-text="$store.openNotebookStore?.sourceDetailExpanded ? '▾ Collapse' : '▸ Show Content'"></span>
+                                        </button>
+                                        <div x-show="$store.openNotebookStore?.sourceDetailExpanded" x-transition style="max-height:300px;overflow-y:auto;margin-top:6px;font-size:0.85em;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--color-text)" x-text="$store.openNotebookStore?.sourceDetail?.full_text || $store.openNotebookStore?.sourceDetail?.content || $store.openNotebookStore?.sourceDetail?.text || ''"></div>
+                                    </div>
+                                </template>
+                                <div style="display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid var(--color-border);padding-top:6px;margin-top:4px">
+                                    <button class="on-btn on-btn--ghost" style="font-size:0.82em;padding:3px 8px" @click="$store.openNotebookStore?.openSourceChat($store.openNotebookStore?.activeSourceDetailId)">💬 Chat</button>
+                                    <button class="on-btn on-btn--ghost" style="font-size:0.82em;padding:3px 8px" @click="$store.openNotebookStore?.getSourceInsights($store.openNotebookStore?.activeSourceDetailId)">💡 Insights</button>
+                                    <button class="on-btn on-btn--ghost" style="font-size:0.82em;padding:3px 8px" @click="$store.openNotebookStore?.sendSourceToChat($store.openNotebookStore?.activeSourceDetailId)">→ A0 Chat</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
             <!-- Source Chat Panel -->
             <div x-show="&#36;store.openNotebookStore?.activeSourceChatId" x-transition class="on-source-chat" style="display:none;padding:8px 12px">
                 <div class="on-card" style="border-color:var(--color-secondary);display:flex;flex-direction:column;max-height:400px">
@@ -253,6 +305,7 @@
                         <button class="on-btn on-btn--ghost" style="flex-shrink:0"
                                 @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'src-' + source.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
                         <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'src-' + source.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
+                            <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.openSourceDetail(source.id); &#36;store.openNotebookStore._activeMenuId = null">📋 Details</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.openSourceChat(source.id); &#36;store.openNotebookStore._activeMenuId = null">💬 Chat</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.getSourceInsights(source.id); &#36;store.openNotebookStore._activeMenuId = null">💡 Insights</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.findRelated(source); &#36;store.openNotebookStore._activeMenuId = null">🔗 Related</button>

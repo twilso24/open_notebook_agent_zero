@@ -83,6 +83,16 @@ class ProxyHandler(ApiHandler):
         if isinstance(body, dict) and body.get("__upload"):
             return await self._handle_upload_proxy(method, target_url, body, extra_headers)
 
+        # Auto-inject speaker_profile for podcast generation
+        if (
+            method == "POST"
+            and path.rstrip("/").endswith("/api/podcasts/generate")
+            and isinstance(body, dict)
+            and "speaker_profile" not in body
+            and body.get("episode_profile")
+        ):
+            body = await self._inject_speaker_profile(body)
+
         # Build headers
         headers: Dict[str, str] = {
             "Accept": "application/json",
@@ -157,6 +167,26 @@ class ProxyHandler(ApiHandler):
                 mimetype="application/json",
             )
  
+    async def _inject_speaker_profile(self, body: dict) -> dict:
+        """Fetch speaker_config from episode profile and inject speaker_profile."""
+        episode_profile_name = body.get("episode_profile", "")
+        if not episode_profile_name:
+            return body
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as c:
+                resp = await c.get(f"{ON_API_URL}/api/episode-profiles")
+                if resp.status_code == 200:
+                    profiles = resp.json()
+                    for p in profiles:
+                        if p.get("name") == episode_profile_name:
+                            speaker_config = p.get("speaker_config", "")
+                            if speaker_config:
+                                body["speaker_profile"] = speaker_config
+                            break
+        except Exception:
+            pass
+        return body
+
     async def _handle_upload_proxy(self, method: str, target_url: str, body: dict, extra_headers: dict) -> dict | Response:
          """Handle file uploads by reconstructing multipart/form-data from base64 parts."""
          import base64

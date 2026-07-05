@@ -286,6 +286,10 @@ class OpenNotebookPodcasts(Tool):
 
         try:
             http_client = await client.get_client()
+
+            # Auto-inject speaker_profile from episode profile's speaker_config
+            await self._inject_speaker_profile(http_client, api_url, body, episode_profile)
+
             response = await http_client.post(url, json=body)
             response.raise_for_status()
             data = response.json()
@@ -309,6 +313,23 @@ class OpenNotebookPodcasts(Tool):
 
         except Exception as e:
             return Response(message=handle_error(e, url), break_loop=False)
+
+    async def _inject_speaker_profile(self, http_client, api_url: str, body: dict, episode_profile: str):
+        """Auto-inject speaker_profile from episode profile's speaker_config."""
+        if not episode_profile or "speaker_profile" in body:
+            return
+        try:
+            resp = await http_client.get(f"{api_url}/api/episode-profiles")
+            if resp.status_code == 200:
+                profiles = resp.json()
+                for p in profiles:
+                    if p.get("name") == episode_profile:
+                        speaker_config = p.get("speaker_config", "")
+                        if speaker_config:
+                            body["speaker_profile"] = speaker_config
+                        break
+        except Exception:
+            pass
 
     async def _status(self, job_id: str) -> Response:
         """Check job status with pipeline-stage detection."""

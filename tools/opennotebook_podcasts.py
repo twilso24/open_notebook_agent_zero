@@ -39,14 +39,13 @@ class OpenNotebookPodcasts(Tool):
             return await self._get(episode_id)
         elif method == "generate":
             episode_profile = kwargs.get("episode_profile", "")
-            speaker_profile = kwargs.get("speaker_profile", "")
             episode_name = kwargs.get("episode_name", "")
             content = kwargs.get("content", "")
             notebook_id = kwargs.get("notebook_id", "")
             briefing_suffix = kwargs.get("briefing_suffix", "")
             confirmed = str(kwargs.get("confirmed", "false")).lower() == "true"
             return await self._generate(
-                episode_profile, speaker_profile, episode_name,
+                episode_profile, episode_name,
                 content, notebook_id, briefing_suffix, confirmed,
             )
         elif method == "status":
@@ -208,7 +207,6 @@ class OpenNotebookPodcasts(Tool):
     async def _generate(
         self,
         episode_profile: str,
-        speaker_profile: str,
         episode_name: str,
         content: str,
         notebook_id: str,
@@ -221,14 +219,6 @@ class OpenNotebookPodcasts(Tool):
             return Response(
                 message=(
                     "❌ **Episode profile required.**\n"
-                    "Use `opennotebook_podcasts:profiles` to see available profiles."
-                ),
-                break_loop=False,
-            )
-        if not speaker_profile:
-            return Response(
-                message=(
-                    "❌ **Speaker profile required.**\n"
                     "Use `opennotebook_podcasts:profiles` to see available profiles."
                 ),
                 break_loop=False,
@@ -264,7 +254,6 @@ class OpenNotebookPodcasts(Tool):
                 f"|--------|-------|",
                 f"| Episode Name | **{episode_name}** |",
                 f"| Episode Profile | `{episode_profile}` |",
-                f"| Speaker Profile | `{speaker_profile}` |",
             ]
             if content:
                 preview = content[:100] + ("..." if len(content) > 100 else "")
@@ -283,7 +272,6 @@ class OpenNotebookPodcasts(Tool):
         # Build request body
         body = {
             "episode_profile": episode_profile,
-            "speaker_profile": speaker_profile,
             "episode_name": episode_name,
         }
         if content:
@@ -633,8 +621,7 @@ class OpenNotebookPodcasts(Tool):
                 lines.append("*No speaker profiles available.*")
 
             lines.append(
-                "💡 Use profile names (e.g. `tech_discussion`, `tech_experts`) with `opennotebook_podcasts:generate`."
-            )
+                "💡 Use episode profile names (e.g. `tech_discussion`) with `opennotebook_podcasts:generate`. Speaker profiles are configured in Open Notebook directly."            )
 
             return Response(
                 message="\n".join(lines),

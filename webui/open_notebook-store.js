@@ -1160,13 +1160,6 @@ const model = {
             this.error = 'Please select an episode profile.';
             return;
         }
-        // Auto-derive speaker_profile from the selected episode profile
-        const epProfile = this.episodeProfiles.find(p => p.name === this.generateForm.episode_profile);
-        const speakerProfile = epProfile?.speaker_config || '';
-        if (!speakerProfile) {
-            this.error = 'Selected episode profile has no speaker configuration.';
-            return;
-        }
         this.generatingJob = { status: 'pending' };
         this.error = null;
         try {
@@ -1198,7 +1191,6 @@ const model = {
             }
             const body = {
                 episode_profile: this.generateForm.episode_profile,
-                speaker_profile: speakerProfile,
                 episode_name: this.generateForm.episode_name.trim(),
             };
             if (contentParts.length) {

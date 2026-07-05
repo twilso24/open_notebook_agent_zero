@@ -5,7 +5,6 @@ podcast episode generation and management
 
 **Key params:**
 - `episode_profile` (string, required for generate) — profile **name** not ID
-- `speaker_profile` (string, auto-derived from episode profile's `speaker_config`)
 - `episode_name` (string, required for generate)
 - `notebook_id` / `content` / `briefing_suffix` (optional for generate)
 - `episode_id` (for get/retry/delete)
@@ -21,7 +20,6 @@ usage:
     "tool_args": {
         "method": "generate",
         "episode_profile": "tech_discussion",
-        "speaker_profile": "tech_experts",
         "episode_name": "Episode Name",
         "notebook_id": "notebook-id"
     }

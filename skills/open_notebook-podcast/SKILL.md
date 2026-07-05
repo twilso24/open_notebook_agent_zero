@@ -39,9 +39,8 @@ Before generating, discover available profiles:
 
 Present the profiles clearly. Guide the user to pick:
 - An **episode profile** (format/style: tech_discussion, business_analysis, etc.)
-- A **speaker profile** (voices: tech_experts, solo_expert, etc.)
 
-**Note:** Profile names are used (not IDs). Speaker profiles are auto-derived from the episode profile's `speaker_config` — no separate speaker selection needed.
+**Note:** Profile names are used (not IDs). Speaker profiles are configured in Open Notebook directly — no speaker selection needed from the plugin.
 
 ### Step 2: Generate Episode
 
@@ -51,7 +50,6 @@ Present the profiles clearly. Guide the user to pick:
     "tool_args": {
         "method": "generate",
         "episode_profile": "profile_name",
-        "speaker_profile": "speaker_name",
         "episode_name": "Descriptive Episode Name",
         "notebook_id": "optional-notebook-id",
         "content": "optional-custom-content",
@@ -162,7 +160,7 @@ The WebUI has a 📤 button on each episode that calls `sendPodcastToChat(episod
 | See profiles | `profiles` | — |
 | List episodes | `list` | — |
 | Get episode | `get` | `episode_id` |
-| Generate | `generate` | `episode_profile`, `speaker_profile`, `episode_name` |
+| Generate | `generate` | `episode_profile`, `episode_name` |
 | Check status | `status` | `job_id` |
 | Retry failed | `retry` | `episode_id` |
 | Delete | `delete` | `episode_id`, `confirmed` |

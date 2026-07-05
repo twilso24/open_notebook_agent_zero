@@ -163,15 +163,18 @@ const model = {
     currentEpisodeId: null,
     isPlaying: false,
 
-    // Podcast generation
+    // Podcast generation (notebook-scoped sources/notes)
     episodeProfiles: [],
-    speakerProfiles: [],
     showGenerateForm: false,
+    podcastSourceFilter: '',
+    podcastNoteFilter: '',
+    selectedSourceIds: [],
+    selectedNoteIds: [],
+    sourceContentMode: 'full',
     generateForm: {
         episode_name: '',
         episode_profile: '',
-        speaker_profile: '',
-        content: ''
+        additional_instructions: '',
     },
     generatingJob: null,
 
@@ -1054,29 +1057,68 @@ const model = {
         this.loading = true;
         this.error = null;
         try {
-            const [epResp, spResp] = await Promise.all([
-                smartFetch(`/api/episode-profiles`),
-                smartFetch(`/api/speaker-profiles`),
-            ]);
+            const epResp = await smartFetch(`/api/episode-profiles`);
             if (!epResp.ok) throw new Error(`Episode profiles: HTTP ${epResp.status}`);
-            if (!spResp.ok) throw new Error(`Speaker profiles: HTTP ${spResp.status}`);
             const epProfiles = await epResp.json();
             this.episodeProfiles = epProfiles;
             if (epProfiles.length && !this.generateForm.episode_profile) this.generateForm.episode_profile = epProfiles[0].name;
-            const spProfiles = (await spResp.json()).filter(p => p.name !== 'solo_expert');
-            this.speakerProfiles = spProfiles;
-            if (spProfiles.length && !this.generateForm.speaker_profile) this.generateForm.speaker_profile = spProfiles[0].name;
         } catch (e) {
             this.error = `Failed to load podcast profiles: ${e.message}`;
             this.episodeProfiles = [];
-            this.speakerProfiles = [];
         } finally {
             this.loading = false;
         }
     },
 
+    // ── Podcast Source/Note Selection (notebook-scoped) ───────────
+    togglePodcastSource(sourceId) {
+        const idx = this.selectedSourceIds.indexOf(sourceId);
+        if (idx >= 0) {
+            this.selectedSourceIds.splice(idx, 1);
+        } else {
+            this.selectedSourceIds.push(sourceId);
+        }
+    },
+
+    togglePodcastNote(noteId) {
+        const idx = this.selectedNoteIds.indexOf(noteId);
+        if (idx >= 0) {
+            this.selectedNoteIds.splice(idx, 1);
+        } else {
+            this.selectedNoteIds.push(noteId);
+        }
+    },
+
+    openPodcastGenerateForm() {
+        this.showGenerateForm = true;
+        this.selectedSourceIds = [];
+        this.selectedNoteIds = [];
+        this.podcastSourceFilter = '';
+        this.podcastNoteFilter = '';
+        this.sourceContentMode = 'full';
+        this.loadPodcastProfiles();
+        // Ensure notebook-scoped data is loaded
+        if (this.sources.length === 0) this.loadSources();
+        if (this.notes.length === 0) this.loadNotes();
+    },
+
+    closePodcastGenerateForm() {
+        this.showGenerateForm = false;
+    },
+
+    get filteredPodcastSources() {
+        if (!this.podcastSourceFilter) return this.sources || [];
+        const q = this.podcastSourceFilter.toLowerCase();
+        return (this.sources || []).filter(s => (s.title || s.name || '').toLowerCase().includes(q));
+    },
+
+    get filteredPodcastNotes() {
+        if (!this.podcastNoteFilter) return this.notes || [];
+        const q = this.podcastNoteFilter.toLowerCase();
+        return (this.notes || []).filter(n => (n.title || n.name || '').toLowerCase().includes(q));
+    },
+
     async generatePodcast() {
-        if (!this.selectedNotebookId) return;
         if (!this.generateForm.episode_name?.trim()) {
             this.error = 'Episode name is required.';
             return;
@@ -1085,23 +1127,57 @@ const model = {
             this.error = 'Please select an episode profile.';
             return;
         }
-        if (!this.generateForm.speaker_profile) {
-            this.error = 'Please select a speaker profile.';
+        // Auto-derive speaker_profile from the selected episode profile
+        const epProfile = this.episodeProfiles.find(p => p.name === this.generateForm.episode_profile);
+        const speakerProfile = epProfile?.speaker_config || '';
+        if (!speakerProfile) {
+            this.error = 'Selected episode profile has no speaker configuration.';
             return;
         }
         this.generatingJob = { status: 'pending' };
         this.error = null;
         try {
-            const body = {
-                episode_profile: this.generateForm.episode_profile || undefined,
-                speaker_profile: this.generateForm.speaker_profile || undefined,
-                episode_name: this.generateForm.episode_name.trim(),
-                notebook_id: this.selectedNotebookId,
-            };
-            if (this.generateForm.content?.trim()) {
-                body.content = this.generateForm.content.trim();
+            // Fetch content from selected sources and notes
+            const contentParts = [];
+            const maxSummaryChars = 2000;
+            for (const sid of this.selectedSourceIds) {
+                try {
+                    const resp = await smartFetch(`/api/sources/${encodeURIComponent(sid)}`);
+                    if (resp.ok) {
+                        const src = await resp.json();
+                        let text = src.full_text || src.content || '';
+                        if (this.sourceContentMode === 'summary' && text.length > maxSummaryChars) {
+                            text = text.slice(0, maxSummaryChars) + '\n\n[... content truncated for summary mode ...]';
+                        }
+                        if (text) contentParts.push(`# ${src.title || 'Source'}\n\n${text}`);
+                    }
+                } catch (e) { /* skip failed source */ }
             }
-            console.log('[OpenNotebook] Generating podcast:', JSON.stringify(body));
+            for (const nid of this.selectedNoteIds) {
+                try {
+                    const resp = await smartFetch(`/api/notes/${encodeURIComponent(nid)}`);
+                    if (resp.ok) {
+                        const note = await resp.json();
+                        const text = note.content || note.text || '';
+                        if (text) contentParts.push(`# ${note.title || 'Note'}\n\n${text}`);
+                    }
+                } catch (e) { /* skip failed note */ }
+            }
+            const body = {
+                episode_profile: this.generateForm.episode_profile,
+                speaker_profile: speakerProfile,
+                episode_name: this.generateForm.episode_name.trim(),
+            };
+            if (contentParts.length) {
+                body.content = contentParts.join('\n\n---\n\n');
+            }
+            if (this.selectedNotebookId) {
+                body.notebook_id = this.selectedNotebookId;
+            }
+            if (this.generateForm.additional_instructions?.trim()) {
+                body.briefing_suffix = this.generateForm.additional_instructions.trim();
+            }
+            console.log('[OpenNotebook] Generating podcast:', JSON.stringify({ ...body, content: body.content ? `[${body.content.length} chars]` : undefined }));
             const resp = await smartFetch(`/api/podcasts/generate`, {
                 method: 'POST',
                 body: JSON.stringify(body),
@@ -1116,10 +1192,11 @@ const model = {
             this.showGenerateForm = false;
             this.generateForm = {
                 episode_name: '',
-                episode_profile: '',
-                speaker_profile: '',
-                content: ''
+                episode_profile: this.generateForm.episode_profile,
+                additional_instructions: '',
             };
+            this.selectedSourceIds = [];
+            this.selectedNoteIds = [];
             this.pollJobStatus(data.job_id || data.id);
         } catch (e) {
             this.error = `Failed to generate podcast: ${e.message}`;

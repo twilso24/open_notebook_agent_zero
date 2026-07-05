@@ -41,7 +41,7 @@ Present the profiles clearly. Guide the user to pick:
 - An **episode profile** (format/style: tech_discussion, business_analysis, etc.)
 - A **speaker profile** (voices: tech_experts, solo_expert, etc.)
 
-**Note:** Profile names are used (not IDs). Filter out `solo_expert` speaker profile — it has invalid TTS config.
+**Note:** Profile names are used (not IDs). Speaker profiles are auto-derived from the episode profile's `speaker_config` — no separate speaker selection needed.
 
 ### Step 2: Generate Episode
 

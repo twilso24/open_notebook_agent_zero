@@ -117,6 +117,8 @@ const model = {
     episodes: [],
     _activeMenuId: null,
     _menuPos: { top: 0, right: 0 },
+    _renamingId: null,
+    _renameValue: '',
 
     // Global search (homepage — searches all notebooks)
     globalSearchText: '',
@@ -357,6 +359,7 @@ const model = {
     },
 
     async renameNotebook(notebookId, name) {
+        if (!name || !name.trim()) return;
         try {
             const resp = await smartFetch('/api/notebooks/' + notebookId, {
                 method: 'PUT',
@@ -370,6 +373,47 @@ const model = {
         } catch (e) {
             this.error = e.message;
         }
+    },
+
+    startRename(notebookId, currentName) {
+        this._renamingId = notebookId;
+        this._renameValue = currentName || '';
+        this._activeMenuId = null;
+        this.$nextTick(() => {
+            const input = document.querySelector(`[data-rename-id="${notebookId}"]`);
+            if (input) { input.focus(); input.select(); }
+        });
+    },
+
+    async confirmRename() {
+        if (!this._renameValue || !this._renameValue.trim()) { this._renamingId = null; return; }
+        const id = this._renamingId;
+        const name = this._renameValue.trim();
+        this._renamingId = null;
+        await this.renameNotebook(id, name);
+    },
+
+    cancelRename() {
+        this._renamingId = null;
+        this._renameValue = '';
+    },
+
+    startChatSessionRename(sessionId, currentTitle) {
+        this._renamingId = 'sess-' + sessionId;
+        this._renameValue = currentTitle || '';
+        this._activeMenuId = null;
+        this.$nextTick(() => {
+            const input = document.querySelector(`[data-rename-id="sess-${sessionId}"]`);
+            if (input) { input.focus(); input.select(); }
+        });
+    },
+
+    async confirmChatSessionRename() {
+        if (!this._renameValue || !this._renameValue.trim()) { this._renamingId = null; return; }
+        const id = this._renamingId.replace('sess-', '');
+        const title = this._renameValue.trim();
+        this._renamingId = null;
+        await this.renameChatSession(id, title);
     },
 
 
@@ -805,10 +849,11 @@ const model = {
         }
     },
     async renameChatSession(sessionId, newTitle) {
+        if (!newTitle || !newTitle.trim()) return;
         try {
             const resp = await smartFetch(`/api/chat/sessions/${encodeURIComponent(sessionId)}`, {
                 method: 'PUT',
-                body: JSON.stringify({ title: newTitle })
+                body: JSON.stringify({ title: newTitle.trim() })
             });
             if (!resp.ok) throw new Error('Failed to rename session');
             await this.loadChatSessions();

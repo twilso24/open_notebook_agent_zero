@@ -180,16 +180,31 @@
         <div class="on-list">
             <template x-for="nb in (&#36;store.openNotebookStore?.notebooks || [])" :key="nb.id">
                 <div class="on-list-item" style="position:relative">
-                    <div style="flex:1;cursor:pointer;min-width:0" @click="&#36;store.openNotebookStore?.selectNotebook(nb.id)">
-                        <div class="on-card__title" x-text="nb.name"></div>
-                        <div class="on-card__meta" x-text="nb.description || nb.path || ''"></div>
+                    <!-- Inline rename mode -->
+                    <div x-show="&#36;store.openNotebookStore?._renamingId === nb.id" style="display:none;flex:1;display:flex;gap:4px;align-items:center">
+                        <input type="text" class="on-input" style="flex:1;min-width:0"
+                               :data-rename-id="nb.id"
+                               x-model="&#36;store.openNotebookStore._renameValue"
+                               @keydown.enter="&#36;store.openNotebookStore?.confirmRename()"
+                               @keydown.escape="&#36;store.openNotebookStore?.cancelRename()"
+                               placeholder="Notebook name">
+                        <button class="on-btn on-btn--primary" style="flex-shrink:0;padding:4px 8px" @click="&#36;store.openNotebookStore?.confirmRename()">✓</button>
+                        <button class="on-btn on-btn--ghost" style="flex-shrink:0;padding:4px 8px" @click="&#36;store.openNotebookStore?.cancelRename()">✕</button>
                     </div>
-                    <button class="on-btn on-btn--ghost" style="flex-shrink:0"
+                    <!-- Normal display mode -->
+                    <template x-if="&#36;store.openNotebookStore?._renamingId !== nb.id">
+                        <div style="display:flex;width:100%;align-items:center">
+                            <div style="flex:1;cursor:pointer;min-width:0" @click="&#36;store.openNotebookStore?.selectNotebook(nb.id)">
+                                <div class="on-card__title" x-text="nb.name"></div>
+                                <div class="on-card__meta" x-text="nb.description || nb.path || ''"></div>
+                            </div>
+                            <button class="on-btn on-btn--ghost" style="flex-shrink:0"
                             @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = nb.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 160})">⋮</button>
                     <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === nb.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
-                        <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.renameNotebook(nb.id, prompt('Rename notebook:', nb.name)); &#36;store.openNotebookStore._activeMenuId = null">Rename</button>
-                        <button class="on-context-menu__item on-context-menu__item--danger" @click="if(confirm('Delete notebook?'))&#36;store.openNotebookStore?.deleteNotebook(nb.id);&#36;store.openNotebookStore._activeMenuId=null">Delete</button>
+                        <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.startRename(nb.id, nb.name)">Rename</button>
+                        <button class="on-context-menu__item on-context-menu__item--danger" @click="&#36;store.openNotebookStore?.deleteNotebook(nb.id); &#36;store.openNotebookStore._activeMenuId=null">Delete</button>
                     </div>
+                    </template>
                 </div>
             </template>
         </div>
@@ -519,16 +534,31 @@
                 <div class="on-list" style="padding:4px 0">
                     <template x-for="sess in (&#36;store.openNotebookStore?.chatSessions || [])" :key="sess.id">
                         <div class="on-list-item" style="position:relative">
-                            <div style="flex:1;cursor:pointer;min-width:0" @click="&#36;store.openNotebookStore?.loadChatSessionMessages(sess.id)">
-                                <div style="font-weight:500" x-text="sess.title || 'Untitled'"></div>
-                                <div style="font-size:0.8em;color:var(--color-text-muted)" x-text="sess.created_at ? new Date(sess.created_at).toLocaleDateString() : ''"></div>
+                            <!-- Inline rename mode -->
+                            <div x-show="&#36;store.openNotebookStore?._renamingId === 'sess-' + sess.id" style="display:none;flex:1;display:flex;gap:4px;align-items:center">
+                                <input type="text" class="on-input" style="flex:1;min-width:0"
+                                       :data-rename-id="'sess-' + sess.id"
+                                       x-model="&#36;store.openNotebookStore._renameValue"
+                                       @keydown.enter="&#36;store.openNotebookStore?.confirmChatSessionRename()"
+                                       @keydown.escape="&#36;store.openNotebookStore?.cancelRename()"
+                                       placeholder="Session title">
+                                <button class="on-btn on-btn--primary" style="flex-shrink:0;padding:4px 8px" @click="&#36;store.openNotebookStore?.confirmChatSessionRename()">✓</button>
+                                <button class="on-btn on-btn--ghost" style="flex-shrink:0;padding:4px 8px" @click="&#36;store.openNotebookStore?.cancelRename()">✕</button>
                             </div>
-                            <button class="on-btn on-btn--ghost" style="flex-shrink:0"
+                            <!-- Normal display mode -->
+                            <template x-if="&#36;store.openNotebookStore?._renamingId !== 'sess-' + sess.id">
+                                <div style="display:flex;width:100%;align-items:center">
+                                    <div style="flex:1;cursor:pointer;min-width:0" @click="&#36;store.openNotebookStore?.loadChatSessionMessages(sess.id)">
+                                        <div style="font-weight:500" x-text="sess.title || 'Untitled'"></div>
+                                        <div style="font-size:0.8em;color:var(--color-text-muted)" x-text="sess.created_at ? new Date(sess.created_at).toLocaleDateString() : ''"></div>
+                                    </div>
+                                    <button class="on-btn on-btn--ghost" style="flex-shrink:0"
                                     @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'sess-' + sess.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
                             <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'sess-' + sess.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
-                                <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.renameChatSession(sess.id, prompt('Rename session:', sess.title)); &#36;store.openNotebookStore._activeMenuId = null">Rename</button>
-                                <button class="on-context-menu__item on-context-menu__item--danger" @click="if(confirm('Delete this session?')){&#36;store.openNotebookStore?.deleteChatSession(sess.id)}; &#36;store.openNotebookStore._activeMenuId=null">🗑️ Delete</button>
+                                <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.startChatSessionRename(sess.id, sess.title)">Rename</button>
+                                <button class="on-context-menu__item on-context-menu__item--danger" @click="&#36;store.openNotebookStore?.deleteChatSession(sess.id); &#36;store.openNotebookStore._activeMenuId=null">🗑️ Delete</button>
                             </div>
+                            </template>
                         </div>
                     </template>
                 </div>

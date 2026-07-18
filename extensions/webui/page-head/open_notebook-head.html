@@ -649,6 +649,26 @@ body.on-panel-active #left-panel {
   display: inline-flex;
 }
 
+/* --- Inline Rename Input --- */
+.on-input {
+  background: var(--color-input);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-family: var(--font-family-main);
+  font-size: var(--font-size-small);
+}
+
+.on-input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.on-input::placeholder {
+  color: var(--color-text-muted);
+}
+
 /* --- Context Menu --- */
 .on-context-menu {
   position: absolute;

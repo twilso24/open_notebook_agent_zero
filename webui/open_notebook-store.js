@@ -1065,10 +1065,47 @@ const model = {
                 method: 'PUT',
                 body: JSON.stringify(updates)
             });
-            if (!resp.ok) throw new Error('Failed to update note');
+            if (!resp.ok) {
+                const errText = await resp.text();
+                console.error('[OpenNotebook] Update note error:', resp.status, errText);
+                throw new Error(`HTTP ${resp.status}: ${errText}`);
+            }
             await this.loadNotes();
+            return true;
         } catch (e) {
-            this.error = e.message;
+            this.error = `Failed to update note: ${e.message}`;
+            return false;
+        }
+    },
+
+    startEditNote(note) {
+        if (!note) return;
+        this.editingNoteId = note.id;
+        this.noteForm.title = note.title || '';
+        this.noteForm.content = note.content || '';
+        this.showNoteForm = true;
+        this._activeMenuId = null;
+    },
+
+    cancelEditNote() {
+        this.editingNoteId = null;
+        this.noteForm = { title: '', content: '' };
+        this.showNoteForm = false;
+    },
+
+    async saveEditNote() {
+        if (!this.editingNoteId) return;
+        if (!this.noteForm.title?.trim()) return;
+        this.savingNote = true;
+        this.error = null;
+        try {
+            const ok = await this.updateNote(this.editingNoteId, {
+                title: this.noteForm.title.trim(),
+                content: this.noteForm.content?.trim() || ''
+            });
+            if (ok) this.cancelEditNote();
+        } finally {
+            this.savingNote = false;
         }
     },
 

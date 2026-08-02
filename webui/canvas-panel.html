@@ -470,17 +470,41 @@
             <div class="on-list" style="padding:4px 0">
                 <template x-for="note in (&#36;store.openNotebookStore?.notes || [])" :key="note.id">
                     <div class="on-list-item" style="position:relative;flex-direction:column;align-items:stretch">
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <span class="on-badge" :class="note.note_type === 'ai' ? 'on-badge--url' : 'on-badge--text'" x-text="note.note_type || 'human'" style="flex-shrink:0"></span>
-                            <div style="flex:1;min-width:0">
-                                <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" x-text="note.title || 'Untitled'"></div>
+                        <!-- Inline edit form for this note -->
+                        <div class="on-journal" x-show="&#36;store.openNotebookStore?.editingNoteId === note.id" style="display:none;margin-bottom:8px">
+                            <input type="text" class="on-journal__input" placeholder="Note title…"
+                                   :value="&#36;store.openNotebookStore?.noteForm.title || ''"
+                                   @input="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.noteForm.title = &#36;event.target.value)"
+                                   style="width:100%;margin-bottom:6px">
+                            <textarea class="on-journal__input" placeholder="Edit note content…" rows="3"
+                                      :value="&#36;store.openNotebookStore?.noteForm.content || ''"
+                                      @input="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.noteForm.content = &#36;event.target.value)"
+                                      @keydown.ctrl.enter="&#36;store.openNotebookStore?.saveEditNote()"></textarea>
+                            <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px">
+                                <button class="on-btn on-btn--ghost" @click="&#36;store.openNotebookStore?.cancelEditNote()">Cancel</button>
+                                <button class="on-btn on-btn--primary"
+                                        :disabled="&#36;store.openNotebookStore?.savingNote || !&#36;store.openNotebookStore?.noteForm.title?.trim()"
+                                        @click="&#36;store.openNotebookStore?.saveEditNote()">
+                                    <span x-show="!&#36;store.openNotebookStore?.savingNote">Save</span>
+                                    <span x-show="&#36;store.openNotebookStore?.savingNote" class="on-spinner" style="width:14px;height:14px;border-width:2px"></span>
+                                </button>
                             </div>
-                            <button class="on-btn on-btn--ghost" style="flex-shrink:0"
-                                    @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'note-' + note.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
                         </div>
-                        <div style="font-size:0.85em;color:var(--color-text-muted);margin-top:4px;max-height:120px;overflow-y:auto;padding-left:4px"
-                             x-html="&#36;store.openNotebookStore?.md(note.content || '')"></div>
+                        <!-- Note content, hidden while editing -->
+                        <div x-show="&#36;store.openNotebookStore?.editingNoteId !== note.id">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span class="on-badge" :class="note.note_type === 'ai' ? 'on-badge--url' : 'on-badge--text'" x-text="note.note_type || 'human'" style="flex-shrink:0"></span>
+                                <div style="flex:1;min-width:0">
+                                    <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" x-text="note.title || 'Untitled'"></div>
+                                </div>
+                                <button class="on-btn on-btn--ghost" style="flex-shrink:0"
+                                        @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'note-' + note.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
+                            </div>
+                            <div style="font-size:0.85em;color:var(--color-text-muted);margin-top:4px;max-height:120px;overflow-y:auto;padding-left:4px"
+                                 x-html="&#36;store.openNotebookStore?.md(note.content || '')"></div>
+                        </div>
                         <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'note-' + note.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
+                            <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.startEditNote(note); &#36;store.openNotebookStore._activeMenuId = null">✏️ Edit</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.sendNoteToChat(note.id); &#36;store.openNotebookStore._activeMenuId = null">→ A0 Chat</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.copyMessage(note.content); &#36;store.openNotebookStore._activeMenuId = null">📋 Copy</button>
                             <button class="on-context-menu__item on-context-menu__item--danger" @click="if(confirm('Delete this note?')){&#36;store.openNotebookStore?.deleteNote(note.id)}; &#36;store.openNotebookStore._activeMenuId = null">🗑️ Delete</button>

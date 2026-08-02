@@ -1,5 +1,7 @@
 # 🎙️ Open Notebook Plugin for Agent Zero
 
+> **Version: 0.2.1**
+
 > **Browse notebooks, manage sources, take notes, find content by name, and generate AI podcast episodes — all from the Agent Zero sidebar.**
 
 A knowledge management plugin that bridges [Open Notebook](https://github.com/lfnovo/open-notebook) into Agent Zero's WebUI, providing a full sidebar panel with notebook browsing, source management, notes CRUD, name-based fuzzy lookup, and async podcast generation.
@@ -27,6 +29,7 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 - Full CRUD: list, create, read, update, delete
 - Collaborative note creation — say "note this down" and the agent composes the note from conversation context
 - Confirmation gates on destructive operations
+- Inline editing — edit note title and content from the ⋮ menu in the Notes tab
 
 ### Name-Based Lookup
 - Fuzzy search for sources and notes by name within a notebook
@@ -94,8 +97,8 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 | **Config** | `config.py`, `default_config.yaml` | Typed settings with env-var fallback |
 | **Shared Helpers** | `shared.py`, `tools/shared.py` | Date/status formatting, name resolution, error translation |
 | **Error Handler** | `errors.py` | HTTP/httpx exceptions → human-readable messages |
-| **WebUI Store** | `webui/open_notebook-store.js` | Alpine.js reactive store (1,674 lines) |
-| **Canvas Panel** | `webui/canvas-panel.html` | Sidebar UI template (622 lines) |
+| **WebUI Store** | `webui/open_notebook-store.js` | Alpine.js reactive store (1,711 lines) |
+| **Canvas Panel** | `webui/canvas-panel.html` | Sidebar UI template (646 lines) |
 | **Styles** | `webui/open_notebook.css` | Panel styling |
 | **Skills** (3) | `skills/` | Meta-skill, podcast workflow, research workflow |
 | **Prompts** (6) | `prompts/default/` | Tool descriptions injected into agent context |
@@ -286,6 +289,7 @@ Key milestones from the commit history:
 
 | Commit | Description |
 |--------|-------------|
+| `933d062` | Feature: inline note editing UI for existing notes (version 0.2.1) |
 | `e8c425b` | Fix rename notebook/session: replace `prompt()` with inline UI |
 | `185b408` | Proxy auto-inject: dynamically fetch `speaker_config` from episode profile for backend compatibility |
 | `a2c8cc0` | Remove `speaker_profile` from podcast generation — only pass episode name, profile, content, and instructions |

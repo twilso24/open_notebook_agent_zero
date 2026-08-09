@@ -1,7 +1,7 @@
 ### opennotebook_notes:
 manage notes in your Open Notebook knowledge base
 
-**Methods:**
+**Actions:**
 
 - `list` — List all notes in a notebook. Shows title, type, created and updated dates.
 - `create` — Create a new note with title and content.
@@ -35,7 +35,7 @@ usage:
     "headline": "Creating note",
     "tool_name": "opennotebook_notes",
     "tool_args": {
-        "method": "create",
+        "action": "create",
         "notebook_id": "notebook-id",
         "title": "My Note Title",
         "content": "The note content goes here"

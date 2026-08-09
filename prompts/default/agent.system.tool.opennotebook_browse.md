@@ -1,7 +1,7 @@
 ### opennotebook_browse:
 browse and explore Open Notebook knowledge bases
 
-**Methods:**
+**Actions:**
 
 - `notebooks` — List all notebooks with name, source count, note count, and last updated date. Use for an overview of available knowledge bases.
 - `notebook` — Get details for a specific notebook by ID. Name-based lookup may also be supported and resolved internally. Shows description, creation date, source/note counts, and archive status.
@@ -25,7 +25,7 @@ usage:
     "headline": "Listing notebooks",
     "tool_name": "opennotebook_browse",
     "tool_args": {
-        "method": "notebooks"
+        "action": "notebooks"
     }
 }
 ~~~
@@ -38,7 +38,7 @@ usage:
     "headline": "Getting notebook details",
     "tool_name": "opennotebook_browse",
     "tool_args": {
-        "method": "notebook",
+        "action": "notebook",
         "notebook_id": "notebook-id-here"
     }
 }
@@ -52,7 +52,7 @@ usage:
     "headline": "Showing knowledge base tree",
     "tool_name": "opennotebook_browse",
     "tool_args": {
-        "method": "tree"
+        "action": "tree"
     }
 }
 ~~~

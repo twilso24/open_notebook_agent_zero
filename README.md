@@ -1,6 +1,6 @@
 # 🎙️ Open Notebook Plugin for Agent Zero
 
-> **Version: 0.2.1**
+> **Version: 0.3.0**
 
 > **Browse notebooks, manage sources, take notes, find content by name, and generate AI podcast episodes — all from the Agent Zero sidebar.**
 
@@ -95,14 +95,14 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 | **Reverse Proxy** | `api/proxy.py` | Bridges frontend ↔ Open Notebook backend |
 | **HTTP Client** | `client.py` | Lazy-singleton `httpx.AsyncClient` with pooling |
 | **Config** | `config.py`, `default_config.yaml` | Typed settings with env-var fallback |
-| **Shared Helpers** | `shared.py`, `tools/shared.py` | Date/status formatting, name resolution, error translation |
+| **Shared Helpers** | `shared.py` | Date/status formatting, name resolution, error translation |
 | **Error Handler** | `errors.py` | HTTP/httpx exceptions → human-readable messages |
 | **WebUI Store** | `webui/open_notebook-store.js` | Alpine.js reactive store (1,711 lines) |
 | **Canvas Panel** | `webui/canvas-panel.html` | Sidebar UI template (646 lines) |
 | **Styles** | `webui/open_notebook.css` | Panel styling |
 | **Skills** (3) | `skills/` | Meta-skill, podcast workflow, research workflow |
 | **Prompts** (6) | `prompts/default/` | Tool descriptions injected into agent context |
-| **Setup** | `execute.py` | Connectivity check and dependency installer |
+| **Hooks** | `hooks.py` | Lifecycle hooks: agent_init, uninstall, config resolution |
 
 ---
 
@@ -121,17 +121,13 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
    git clone https://github.com/twilso24/open_notebook_agent_zero.git open_notebook
    ```
 
-2. **Run setup** — click the setup button in Plugins UI, or run manually:
-   ```bash
-   python execute.py
-   ```
-   This checks backend connectivity and installs the `websockets` dependency if needed.
+2. **Restart Agent Zero** — the plugin auto-initializes via `hooks.py`, checking backend connectivity and dependencies.
 
 3. **Verify connection** — in the Agent Zero chat:
    ```json
    {
        "tool_name": "opennotebook_manage",
-       "tool_args": { "method": "status" }
+       "tool_args": { "action": "status" }
    }
    ```
 
@@ -153,7 +149,7 @@ Environment variable `OPEN_NOTEBOOK_API_URL` overrides `api_url` if set.
 
 ## 🛠️ Tools Reference
 
-| Tool | Methods | Description |
+| Tool | Actions | Description |
 |------|---------|-------------|
 | `opennotebook_browse` | `notebooks`, `notebook`, `tree` | Explore notebooks, inspect details, hierarchical overview |
 | `opennotebook_manage` | `status`, `config`, `create` | Check connectivity, view settings, create notebooks |
@@ -178,7 +174,7 @@ Environment variable `OPEN_NOTEBOOK_API_URL` overrides `api_url` if set.
 ```json
 {
     "tool_name": "opennotebook_browse",
-    "tool_args": { "method": "notebooks" }
+    "tool_args": { "action": "notebooks" }
 }
 ```
 
@@ -187,7 +183,7 @@ Environment variable `OPEN_NOTEBOOK_API_URL` overrides `api_url` if set.
 {
     "tool_name": "opennotebook_sources",
     "tool_args": {
-        "method": "add",
+        "action": "add",
         "notebook_id": "notebook:uiv698qm1c0kkbfpdp4u",
         "content": "https://example.com/article"
     }
@@ -199,7 +195,7 @@ Environment variable `OPEN_NOTEBOOK_API_URL` overrides `api_url` if set.
 {
     "tool_name": "opennotebook_sources",
     "tool_args": {
-        "method": "add",
+        "action": "add",
         "notebook_id": "notebook:uiv698qm1c0kkbfpdp4u",
         "content": "/path/to/report.pdf"
     }
@@ -212,7 +208,7 @@ The file is automatically detected, read, and uploaded — no manual processing 
 {
     "tool_name": "opennotebook_notes",
     "tool_args": {
-        "method": "create",
+        "action": "create",
         "notebook_id": "notebook:uiv698qm1c0kkbfpdp4u",
         "title": "Key Findings",
         "content": "The clarity optimization improved average scores by 18.7 points."
@@ -225,7 +221,7 @@ The file is automatically detected, read, and uploaded — no manual processing 
 {
     "tool_name": "opennotebook_query",
     "tool_args": {
-        "method": "find",
+        "action": "find",
         "notebook_id": "notebook:uiv698qm1c0kkbfpdp4u",
         "name": "clarity"
     }
@@ -237,7 +233,7 @@ The file is automatically detected, read, and uploaded — no manual processing 
 {
     "tool_name": "opennotebook_podcasts",
     "tool_args": {
-        "method": "generate",
+        "action": "generate",
         "episode_profile": "tech_discussion",
         "episode_name": "Deep Dive: Clarity Optimization",
         "notebook_id": "notebook:uiv698qm1c0kkbfpdp4u"
@@ -248,7 +244,7 @@ Returns a `job_id` — wait 3–5 minutes, then check status:
 ```json
 {
     "tool_name": "opennotebook_podcasts",
-    "tool_args": { "method": "status", "job_id": "returned-job-id" }
+    "tool_args": { "action": "status", "job_id": "returned-job-id" }
 }
 ```
 
@@ -289,6 +285,7 @@ Key milestones from the commit history:
 
 | Commit | Description |
 |--------|-------------|
+| `audit-0.3.0` | **Audit fix: qualified imports, telemetry wiring, hooks.py, prompt action key, proxy config** |
 | `933d062` | Feature: inline note editing UI for existing notes (version 0.2.1) |
 | `e8c425b` | Fix rename notebook/session: replace `prompt()` with inline UI |
 | `185b408` | Proxy auto-inject: dynamically fetch `speaker_config` from episode profile for backend compatibility |
@@ -314,7 +311,7 @@ open_notebook/
 ├── client.py                # Shared httpx.AsyncClient singleton
 ├── shared.py                # Formatting, name resolution, error routing
 ├── errors.py                # HTTP/httpx exception translator
-├── execute.py               # Setup script (connectivity + deps)
+├── hooks.py                 # Lifecycle hooks (agent_init, uninstall)
 ├── requirements.txt         # httpx>=0.24.0
 ├── LICENSE                  # MIT
 │
@@ -328,7 +325,6 @@ open_notebook/
 │   ├── opennotebook_notes.py      # Notes CRUD (536 lines)
 │   ├── opennotebook_query.py      # Name-based lookup (174 lines)
 │   ├── opennotebook_podcasts.py   # Podcast generation (654 lines)
-│   └── shared.py                  # Tool-level shared helpers (146 lines)
 │
 ├── prompts/default/               # Agent tool descriptions (6 files)
 │

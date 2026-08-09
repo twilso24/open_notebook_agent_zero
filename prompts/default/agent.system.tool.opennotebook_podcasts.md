@@ -1,7 +1,7 @@
 ### opennotebook_podcasts:
 podcast episode generation and management
 
-**Methods:** `profiles`, `list`, `get`, `generate`, `status`, `retry`, `delete`
+**Actions:** `profiles`, `list`, `get`, `generate`, `status`, `retry`, `delete`
 
 **Key params:**
 - `episode_profile` (string, required for generate) — profile **name** not ID
@@ -18,7 +18,7 @@ usage:
 {
     "tool_name": "opennotebook_podcasts",
     "tool_args": {
-        "method": "generate",
+        "action": "generate",
         "episode_profile": "tech_discussion",
         "episode_name": "Episode Name",
         "notebook_id": "notebook-id"

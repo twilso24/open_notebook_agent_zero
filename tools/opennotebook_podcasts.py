@@ -7,22 +7,9 @@ Methods: list, get, generate, status, retry, delete, profiles
 
 from helpers.tool import Tool, Response
 
-import sys
-from pathlib import Path
-
-# Add plugin root to path for imports
-_plugin_root = str(Path(__file__).resolve().parent.parent)
-if _plugin_root not in sys.path:
-    sys.path.insert(0, _plugin_root)
-_tools_dir = str(Path(__file__).resolve().parent)
-if _tools_dir not in sys.path:
-    sys.path.insert(0, _tools_dir)
-
-import config
-import client
-import errors
-sys.modules.pop('shared', None)
-from shared import format_date, format_status, get_asset_type, handle_error, prepare_content_for_backend
+from usr.plugins.open_notebook import config, client, errors
+from usr.plugins.open_notebook.shared import format_date, format_status, get_asset_type, handle_error, prepare_content_for_backend
+from usr.plugins.open_notebook import telemetry
 
 # Limits
 _MAX_EPISODES = 20
@@ -30,7 +17,7 @@ _MAX_TRANSCRIPT_CHARS = 2000
 
 class OpenNotebookPodcasts(Tool):
     async def execute(self, **kwargs):
-        method = kwargs.get("action") or self.method or "list"
+        method = kwargs.get("action", "list")
 
         if method == "list":
             return await self._list()
@@ -107,6 +94,7 @@ class OpenNotebookPodcasts(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _get(self, episode_id: str) -> Response:
@@ -202,6 +190,7 @@ class OpenNotebookPodcasts(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _generate(
@@ -312,6 +301,7 @@ class OpenNotebookPodcasts(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _inject_speaker_profile(self, http_client, api_url: str, body: dict, episode_profile: str):
@@ -408,6 +398,7 @@ class OpenNotebookPodcasts(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _detect_pipeline_stage(
@@ -499,6 +490,7 @@ class OpenNotebookPodcasts(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _delete(self, episode_id: str, confirmed: bool) -> Response:
@@ -575,6 +567,7 @@ class OpenNotebookPodcasts(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _profiles(self) -> Response:
@@ -650,5 +643,6 @@ class OpenNotebookPodcasts(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, f"{api_url}/api/episode-profiles"), break_loop=False)
 

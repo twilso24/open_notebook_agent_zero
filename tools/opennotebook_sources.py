@@ -21,23 +21,9 @@ Usage:
 from helpers.tool import Tool, Response
 
 import asyncio
-import sys
-from pathlib import Path
-
-# Add plugin root to path for shared imports (config, client, errors)
-_plugin_root = str(Path(__file__).resolve().parent.parent)
-if _plugin_root not in sys.path:
-    sys.path.insert(0, _plugin_root)
-_tools_dir = str(Path(__file__).resolve().parent)
-if _tools_dir not in sys.path:
-    sys.path.insert(0, _tools_dir)
-
-import config
-import client
-import errors
-sys.modules.pop('shared', None)
-from shared import format_date, format_status, get_asset_type, handle_error, prepare_content_for_backend
-
+from usr.plugins.open_notebook import config, client, errors
+from usr.plugins.open_notebook.shared import format_date, format_status, get_asset_type, handle_error, prepare_content_for_backend, resolve_notebook_id
+from usr.plugins.open_notebook import telemetry
 # Limits for display — prevents overwhelming output
 _MAX_SOURCES = 20
 _MAX_CONTENT_CHARS = 2000  # Truncate long source content for readability
@@ -101,7 +87,7 @@ def _detect_and_prepare(content: str, title: str, notebook_id: str) -> tuple:
 
 class OpenNotebookSources(Tool):
     async def execute(self, **kwargs):
-        """Route to the correct source method based on self.method.
+        """Route to the correct source method based on the action parameter.
 
         Supported methods: list, add, read, delete.
         Defaults to 'list' if no method is specified.
@@ -109,15 +95,13 @@ class OpenNotebookSources(Tool):
         Returns:
             Response: The result from the delegated method handler.
         """
-        method = kwargs.get("action") or self.method or "list"
+        method = kwargs.get("action", "list")
 
         if method == "list":
             # List all sources in a notebook — requires notebook_id
             notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
             if notebook_id:
                 try:
-                    sys.modules.pop('shared', None)
-                    from shared import resolve_notebook_id
                     notebook_id = await resolve_notebook_id(self.agent, notebook_id)
                 except ValueError as e:
                     return Response(
@@ -135,8 +119,6 @@ class OpenNotebookSources(Tool):
             create_if_missing = str(kwargs.get("create_if_missing", "false")).lower() == "true"
             if notebook_id:
                 try:
-                    sys.modules.pop('shared', None)
-                    from shared import resolve_notebook_id
                     notebook_id = await resolve_notebook_id(self.agent, notebook_id)
                 except ValueError as e:
                     if create_if_missing:
@@ -257,6 +239,7 @@ class OpenNotebookSources(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _add(self, notebook_id: str, content: str, title: str, confirmed: bool) -> Response:
@@ -378,6 +361,7 @@ class OpenNotebookSources(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _read(self, source_id: str) -> Response:
@@ -475,6 +459,7 @@ class OpenNotebookSources(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _delete(self, source_id: str, confirmed: bool) -> Response:
@@ -572,6 +557,7 @@ class OpenNotebookSources(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _generate_insight(self, source_id: str) -> str:

@@ -9,27 +9,14 @@ import time
 from helpers.tool import Tool, Response
 
 # Import plugin modules using relative paths from plugin root
-import sys
-from pathlib import Path
-
-# Add plugin root to path for imports
-_plugin_root = str(Path(__file__).resolve().parent.parent)
-if _plugin_root not in sys.path:
-    sys.path.insert(0, _plugin_root)
-_tools_dir = str(Path(__file__).resolve().parent)
-if _tools_dir not in sys.path:
-    sys.path.insert(0, _tools_dir)
-
-import config
-import client
-import errors
-sys.modules.pop('shared', None)
-from shared import format_date, format_status, get_asset_type, handle_error
+from usr.plugins.open_notebook import config, client, errors
+from usr.plugins.open_notebook.shared import format_date, format_status, get_asset_type, handle_error
+from usr.plugins.open_notebook import telemetry
 
 
 class OpenNotebookManage(Tool):
     async def execute(self, **kwargs):
-        method = kwargs.get("action") or self.method or "status"
+        method = kwargs.get("action", "status")
 
         if method == "status":
             return await self._status()
@@ -213,4 +200,5 @@ class OpenNotebookManage(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)

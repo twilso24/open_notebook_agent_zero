@@ -10,16 +10,7 @@ import time
 import httpx
 from helpers.extension import Extension
 
-import sys
-from pathlib import Path
-
-# Add plugin root to path for imports
-_plugin_root = str(Path(__file__).resolve().parent.parent.parent.parent)
-if _plugin_root not in sys.path:
-    sys.path.insert(0, _plugin_root)
-
-import config
-import telemetry
+from usr.plugins.open_notebook import config, telemetry
 
 # Health check budget
 _HEALTH_TIMEOUT = 0.4  # 400ms

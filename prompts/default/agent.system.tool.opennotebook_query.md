@@ -1,7 +1,7 @@
 ### opennotebook_query:
 look up sources and notes by name
 
-**Methods:** `find`
+**Actions:** `find`
 
 **Key params:**
 - `name` (string) — item name to locate
@@ -12,7 +12,7 @@ usage:
 {
     "tool_name": "opennotebook_query",
     "tool_args": {
-        "method": "find",
+        "action": "find",
         "notebook_id": "notebook-id-or-name",
         "name": "item name or partial name"
     }

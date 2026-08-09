@@ -1,7 +1,7 @@
 ### opennotebook_sources:
 manage research sources in Open Notebook notebooks
 
-**Methods:**
+**Actions:**
 
 - `list` — List all sources in a notebook. Shows name, type, processing status, and date added.
 - `add` — Add a new source to a notebook. Auto-detects content type: URL (http/https) → File (known extension) → Text (default).
@@ -35,7 +35,7 @@ usage:
     "headline": "Adding source to notebook",
     "tool_name": "opennotebook_sources",
     "tool_args": {
-        "method": "add",
+        "action": "add",
         "notebook_id": "notebook-id",
         "content": "https://example.com/article"
     }

@@ -9,7 +9,7 @@ try:
     import httpx
 except ImportError:
     httpx = None
-from errors import format_timeout, format_connection_error, format_http_error, format_unexpected
+from usr.plugins.open_notebook.errors import format_timeout, format_connection_error, format_http_error, format_unexpected
 
 
 def format_date(date_str: str) -> str:
@@ -62,6 +62,69 @@ def handle_error(error: Exception, url: str) -> str:
         return format_unexpected(error)
 
 
+
+# Known file extensions for auto-detection of file-type content
+_FILE_EXTENSIONS = {'.pdf', '.doc', '.docx', '.txt', '.md', '.rtf', '.odt', '.epub', '.html', '.htm', '.csv'}
+
+
+def prepare_content_for_backend(content: str) -> str:
+    """Detects if content is a local file path and reads it, otherwise returns content as-is.
+
+    Args:
+        content: The raw content string (file path or text).
+
+    Returns:
+        str: The actual text content to send to the backend.
+
+    Raises:
+        ValueError: If a file path is detected but cannot be read or doesn't exist.
+    """
+    if not content:
+        return content
+
+    import os
+    content_path = content.strip()
+    _, ext = os.path.splitext(content_path)
+
+    if ext.lower() in _FILE_EXTENSIONS:
+        if os.path.isfile(content_path):
+            try:
+                with open(content_path, 'r', encoding='utf-8', errors='replace') as f:
+                    return f.read()
+            except PermissionError:
+                raise ValueError(f"Permission denied reading file: {content_path}")
+            except UnicodeDecodeError as e:
+                raise ValueError(f"Cannot decode file content (may be binary): {content_path} - {str(e)}")
+            except Exception as e:
+                raise ValueError(f"Error reading file {content_path}: {str(e)}")
+        else:
+            raise ValueError(f"File not found: {content_path}")
+
+    return content_path
+
+
+def check_write_permission(agent, operation_name: str) -> str | None:
+    """Check if the plugin allows write operations. Returns error message if blocked, None if allowed.
+
+    Centralized enforcement point (Fix #8) — all write/delete methods should
+    call this before performing any mutation.
+
+    Args:
+        agent: The agent instance for config access.
+        operation_name: Human-readable name of the operation (e.g., 'create notebook').
+
+    Returns:
+        None if write is allowed, or an error message string if blocked.
+    """
+    from usr.plugins.open_notebook import config
+    if config.is_read_only(agent):
+        return (
+            f"⚠️ **Plugin is in read-only mode.** Cannot {operation_name}.\n"
+            "Use `opennotebook_manage:config` to check or change read-only mode."
+        )
+    return None
+
+
 async def resolve_notebook_id(agent, notebook_id_or_name: str) -> str:
     """Resolve a notebook name or partial ID to a full notebook ID.
     
@@ -70,13 +133,7 @@ async def resolve_notebook_id(agent, notebook_id_or_name: str) -> str:
     Returns the full ID string, or raises ValueError if not found.
     """
     import re
-    from pathlib import Path
-    import sys
-    _plugin_root = str(Path(__file__).resolve().parent.parent)
-    if _plugin_root not in sys.path:
-        sys.path.insert(0, _plugin_root)
-    import config
-    import client
+    from usr.plugins.open_notebook import config, client
     
     if not notebook_id_or_name:
         raise ValueError("Notebook ID or name is required")

@@ -18,8 +18,22 @@ import httpx
 from flask import request as flask_request
 from helpers.api import ApiHandler, Request, Response
 
-# Backend URL from env or default
-ON_API_URL = os.environ.get("OPEN_NOTEBOOK_API_URL", "http://host.docker.internal:5055")
+
+def _resolve_api_url() -> str:
+    """Resolve Open Notebook API URL from plugin config, then env, then default.
+
+    Checks plugin config first (set via WebUI settings), then falls back to
+    the OPEN_NOTEBOOK_API_URL environment variable, then the default.
+    """
+    try:
+        from helpers import plugins
+        cfg = plugins.get_plugin_config("open_notebook") or {}
+        url = cfg.get("api_url")
+        if url:
+            return url
+    except Exception:
+        pass
+    return os.environ.get("OPEN_NOTEBOOK_API_URL", "http://host.docker.internal:5055")
 
 
 class ProxyHandler(ApiHandler):
@@ -44,7 +58,7 @@ class ProxyHandler(ApiHandler):
     async def _handle_binary_proxy(self, request: Request) -> Response:
         """Handle GET requests for binary content (audio files, etc.)."""
         path = request.args.get("path", "/")
-        target_url = ON_API_URL.rstrip("/") + "/" + path.lstrip("/")
+        target_url = _resolve_api_url().rstrip("/") + "/" + path.lstrip("/")
 
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
@@ -77,7 +91,7 @@ class ProxyHandler(ApiHandler):
         extra_headers = input.get("headers", {})
 
         # Build target URL
-        target_url = ON_API_URL.rstrip("/") + "/" + path.lstrip("/")
+        target_url = _resolve_api_url().rstrip("/") + "/" + path.lstrip("/")
 
         # Upload mode: body carries base64-encoded multipart parts
         if isinstance(body, dict) and body.get("__upload"):
@@ -152,7 +166,7 @@ class ProxyHandler(ApiHandler):
             return Response(
                 response=json_mod.dumps({
                     "ok": False,
-                    "error": "Open Notebook backend unreachable on " + ON_API_URL,
+                    "error": "Open Notebook backend unreachable on " + _resolve_api_url(),
                 }),
                 status=502,
                 mimetype="application/json",
@@ -174,7 +188,7 @@ class ProxyHandler(ApiHandler):
             return body
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:
-                resp = await c.get(f"{ON_API_URL}/api/episode-profiles")
+                resp = await c.get(f"{_resolve_api_url()}/api/episode-profiles")
                 if resp.status_code == 200:
                     profiles = resp.json()
                     for p in profiles:
@@ -253,7 +267,7 @@ class ProxyHandler(ApiHandler):
              return Response(
                  response=json_mod.dumps({
                      "ok": False,
-                     "error": "Open Notebook backend unreachable on " + ON_API_URL,
+                     "error": "Open Notebook backend unreachable on " + _resolve_api_url(),
                  }),
                  status=502,
                  mimetype="application/json",

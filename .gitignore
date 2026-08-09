@@ -1,3 +1,4 @@
-execute_record.json
 __pycache__/
 *.pyc
+tests/
+VALIDATION_CHECKLIST.md

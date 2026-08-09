@@ -18,29 +18,15 @@ Usage:
 
 from helpers.tool import Tool, Response
 
-import sys
-from pathlib import Path
-
-# Add plugin root to path for shared imports (config, client, errors)
-_plugin_root = str(Path(__file__).resolve().parent.parent)
-if _plugin_root not in sys.path:
-    sys.path.insert(0, _plugin_root)
-_tools_dir = str(Path(__file__).resolve().parent)
-if _tools_dir not in sys.path:
-    sys.path.insert(0, _tools_dir)
-
-import config
-import client
-import errors
-sys.modules.pop('shared', None)
-from shared import format_date, format_status, get_asset_type, handle_error, prepare_content_for_backend
-
+from usr.plugins.open_notebook import config, client, errors
+from usr.plugins.open_notebook.shared import format_date, format_status, get_asset_type, handle_error, prepare_content_for_backend, resolve_notebook_id
+from usr.plugins.open_notebook import telemetry
 # Limits for display — prevents overwhelming output
 _MAX_NOTES = 20
 
 class OpenNotebookNotes(Tool):
     async def execute(self, **kwargs):
-        """Route to the correct note method based on self.method.
+        """Route to the correct note method based on the action parameter.
 
         Supported methods: list, create, read, update, delete.
         Defaults to 'list' if no method is specified.
@@ -48,15 +34,13 @@ class OpenNotebookNotes(Tool):
         Returns:
             Response: The result from the delegated method handler.
         """
-        method = kwargs.get("action") or self.method or "list"
+        method = kwargs.get("action", "list")
 
         if method == "list":
             # List all notes in a notebook — requires notebook_id
             notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
             if notebook_id:
                 try:
-                    sys.modules.pop('shared', None)
-                    from shared import resolve_notebook_id
                     notebook_id = await resolve_notebook_id(self.agent, notebook_id)
                 except ValueError as e:
                     return Response(
@@ -73,8 +57,6 @@ class OpenNotebookNotes(Tool):
             notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
             if notebook_id:
                 try:
-                    sys.modules.pop('shared', None)
-                    from shared import resolve_notebook_id
                     notebook_id = await resolve_notebook_id(self.agent, notebook_id)
                 except ValueError as e:
                     return Response(
@@ -182,6 +164,7 @@ class OpenNotebookNotes(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _create(self, notebook_id: str, title: str, content: str) -> Response:
@@ -274,6 +257,7 @@ class OpenNotebookNotes(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _read(self, note_id: str) -> Response:
@@ -336,6 +320,7 @@ class OpenNotebookNotes(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _update(self, note_id: str, title: str, content: str) -> Response:
@@ -436,6 +421,7 @@ class OpenNotebookNotes(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _delete(self, note_id: str, confirmed: bool) -> Response:
@@ -532,5 +518,6 @@ class OpenNotebookNotes(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 

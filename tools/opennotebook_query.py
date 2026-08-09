@@ -14,26 +14,12 @@ Usage:
 
 from helpers.tool import Tool, Response
 
-import sys
-from pathlib import Path
-
-# Add plugin root to path for shared imports (config, client, errors)
-_plugin_root = str(Path(__file__).resolve().parent.parent)
-if _plugin_root not in sys.path:
-    sys.path.insert(0, _plugin_root)
-_tools_dir = str(Path(__file__).resolve().parent)
-if _tools_dir not in sys.path:
-    sys.path.insert(0, _tools_dir)
-
-import config
-import client
-import errors
-sys.modules.pop('shared', None)
-from shared import format_date, format_status, get_asset_type, handle_error
-
+from usr.plugins.open_notebook import config, client, errors
+from usr.plugins.open_notebook.shared import format_date, format_status, get_asset_type, handle_error, resolve_notebook_id
+from usr.plugins.open_notebook import telemetry
 class OpenNotebookQuery(Tool):
     async def execute(self, **kwargs):
-        """Route to the correct query method based on self.method.
+        """Route to the correct query method based on the action parameter.
 
         Supported methods: find.
         Defaults to 'find' if no method is specified.
@@ -41,14 +27,12 @@ class OpenNotebookQuery(Tool):
         Returns:
             Response: The result from the delegated method handler.
         """
-        method = kwargs.get("action") or self.method or "find"
+        method = kwargs.get("action", "find")
 
         if method == "find":
             notebook_id = kwargs.get("notebook_id", "") or kwargs.get("notebook", "")
             if notebook_id:
                 try:
-                    sys.modules.pop('shared', None)
-                    from shared import resolve_notebook_id
                     notebook_id = await resolve_notebook_id(self.agent, notebook_id)
                 except ValueError as e:
                     return Response(message=f"❌ **{e}**", break_loop=False)
@@ -171,4 +155,5 @@ class OpenNotebookQuery(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, f"{api_url}/api/sources"), break_loop=False)

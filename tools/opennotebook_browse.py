@@ -12,23 +12,9 @@ Methods:
 
 from helpers.tool import Tool, Response
 
-import sys
-from pathlib import Path
-
-# Add plugin root to path for imports
-_plugin_root = str(Path(__file__).resolve().parent.parent)
-if _plugin_root not in sys.path:
-    sys.path.insert(0, _plugin_root)
-_tools_dir = str(Path(__file__).resolve().parent)
-if _tools_dir not in sys.path:
-    sys.path.insert(0, _tools_dir)
-
-import config
-import client
-import errors
-sys.modules.pop('shared', None)
-from shared import format_date, format_status, get_asset_type, handle_error
-
+from usr.plugins.open_notebook import config, client, errors
+from usr.plugins.open_notebook.shared import format_date, format_status, get_asset_type, handle_error, resolve_notebook_id
+from usr.plugins.open_notebook import telemetry
 # Limits
 _MAX_NOTEBOOKS = 20   # Maximum notebooks shown in list view
 _MAX_TREE_ITEMS = 50  # Threshold for compact vs full tree view
@@ -36,7 +22,7 @@ _MAX_TREE_ITEMS = 50  # Threshold for compact vs full tree view
 class OpenNotebookBrowse(Tool):
     async def execute(self, **kwargs):
         """Route to the requested browse method."""
-        method = kwargs.get("action") or self.method or "notebooks"
+        method = kwargs.get("action", "notebooks")
 
         if method == "notebooks":
             return await self._notebooks()
@@ -112,6 +98,7 @@ class OpenNotebookBrowse(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _notebook(self, notebook_id: str) -> Response:
@@ -134,8 +121,6 @@ class OpenNotebookBrowse(Tool):
 
         # Resolve notebook names / partial IDs through the shared helper for consistent behavior
         try:
-            sys.modules.pop('shared', None)
-            from shared import resolve_notebook_id
             notebook_id = await resolve_notebook_id(self.agent, notebook_id)
         except ValueError as e:
             return Response(
@@ -202,6 +187,7 @@ class OpenNotebookBrowse(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 
     async def _tree(self) -> Response:
@@ -268,5 +254,6 @@ class OpenNotebookBrowse(Tool):
             )
 
         except Exception as e:
+            telemetry.record_operation(self.name, False, 0)
             return Response(message=handle_error(e, url), break_loop=False)
 

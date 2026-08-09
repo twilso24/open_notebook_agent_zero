@@ -9,7 +9,7 @@ usage:
     "headline": "Checking Open Notebook status",
     "tool_name": "opennotebook_manage",
     "tool_args": {
-        "method": "status"
+        "action": "status"
     }
 }
 ~~~
@@ -22,13 +22,13 @@ usage:
     "headline": "Creating Open Notebook notebook",
     "tool_name": "opennotebook_manage",
     "tool_args": {
-        "method": "create",
+        "action": "create",
         "name": "test"
     }
 }
 ~~~
 
-**Methods:**
+**Actions:**
 
 - `status` — Check if Open Notebook is reachable and healthy. Use when you need to verify connectivity or troubleshoot connection issues.
 - `config` — Display current plugin configuration (API URL, read-only mode, confirmation settings). Use when the user wants to see or verify their settings.
@@ -40,12 +40,12 @@ usage:
 - Backend alias support for `title` and `notebook_name` is covered by `/a0/usr/plugins/open_notebook/tests/test_open_notebook_create_and_missing_notebook_regression.py`
 
 **Natural language mapping:**
-- "create a notebook named test" → `method: create`, `name: "test"`
-- "make a notebook called test" → `method: create`, `name: "test"`
-- "add notebook test" → `method: create`, `name: "test"`
-- "open notebook test" → `method: create`, `name: "test"`
-- "new notebook test" → `method: create`, `name: "test"`
-- "create notebook named tester" → `method: create`, `name: "tester"`
+- "create a notebook named test" → `action: create`, `name: "test"`
+- "make a notebook called test" → `action: create`, `name: "test"`
+- "add notebook test" → `action: create`, `name: "test"`
+- "open notebook test" → `action: create`, `name: "test"`
+- "new notebook test" → `action: create`, `name: "test"`
+- "create notebook named tester" → `action: create`, `name: "tester"`
 
 **When to use:**
 - User asks "is Open Notebook connected?" or "check connection" → use `status`

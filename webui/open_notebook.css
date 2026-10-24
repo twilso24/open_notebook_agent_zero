@@ -153,14 +153,15 @@
 
 .on-btn--primary {
   background: var(--color-highlight);
-  color: var(--color-background);
+  color: #000;
   border-color: var(--color-highlight);
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .on-btn--primary:hover {
   opacity: 0.85;
   background: var(--color-highlight);
+  color: #000;
 }
 
 .on-btn--primary:disabled {
@@ -253,7 +254,7 @@
 
 .on-card__title {
   font-family: var(--font-family-main);
-  font-weight: 600;
+  font-weight: 400;
   font-size: var(--font-size-normal);
   color: var(--color-text);
   overflow: hidden;

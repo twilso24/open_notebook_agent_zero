@@ -12,7 +12,7 @@ def test_hook_reads_selection_and_builds_grounding():
     src = HOOK.read_text() if HOOK.exists() else ''
     assert 'read_selection' in src
     assert 'build_grounding' in src
-    assert 'selection_to_context_config' in src
+    assert 'selection_to_explicit_context_config' in src
 
 
 def test_hook_appends_to_system_prompt_and_skips_when_empty():

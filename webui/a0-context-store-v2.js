@@ -2,7 +2,8 @@
 // Feeds the Notebooks chip in the chat-input progress row.
 // Selection is kept per browser in localStorage; the server mirror is a follow-up step.
 
-const STORAGE_KEY = 'open_notebook:a0-context';
+const STORAGE_KEY = 'open_notebook:a0-context:v3';
+const LEGACY_STORAGE_KEY = 'open_notebook:a0-context';
 const PROXY_URL = '/api/plugins/open_notebook/proxy';
 
 function doFetch(...args) {
@@ -32,14 +33,57 @@ function makeStore() {
     cache: { sources: {}, notes: {}, insights: {} },
 
     onMount() {
+      this.mountOk = true;
+      this.loadLocalSelection();
+      if (!Object.keys(this.selection).length) this.loadFromServer();
+      Object.keys(this.selection).forEach((nb) => this.loadNotebookData(nb));
+    },
+
+    // Load persisted selection. When the v3 key is missing, adopt the legacy
+    // selection and reset every source to 'off' so stale 'insights'/'full'
+    // defaults cannot resurrect. Notes are preserved.
+    loadLocalSelection() {
+      let raw = null;
       try {
-        this.selection = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {};
+        raw = localStorage.getItem(STORAGE_KEY);
+      } catch (e) {}
+      if (!raw) {
+        try {
+          raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+        } catch (e) {}
+        if (raw) {
+          try {
+            this.selection = this._adopt(JSON.parse(raw) || {});
+            this.save();
+            this.commit();
+          } catch (e) {
+            this.selection = {};
+          }
+          return;
+        }
+      }
+      try {
+        this.selection = JSON.parse(raw || '{}') || {};
       } catch (e) {
         this.selection = {};
       }
-      this.mountOk = true;
-      if (!Object.keys(this.selection).length) this.loadFromServer();
-      Object.keys(this.selection).forEach((nb) => this.loadNotebookData(nb));
+    },
+
+    // Sanitize a selection: force every source mode to 'off', keep insight
+    // maps and note preferences. Used for legacy local and server selections.
+    _adopt(sel) {
+      const out = {};
+      if (!sel || typeof sel !== 'object') return out;
+      for (const nbId of Object.keys(sel)) {
+        const st = sel[nbId];
+        if (!st || typeof st !== 'object') continue;
+        const sources = {};
+        for (const srcId of Object.keys(st.sources || {})) {
+          sources[srcId] = 'off';
+        }
+        out[nbId] = { sources: sources, insights: st.insights || {}, notes: st.notes || {} };
+      }
+      return out;
     },
 
     cleanup() {},
@@ -75,7 +119,7 @@ function makeStore() {
         if (!resp.ok) return;
         const data = await resp.json();
         if (!Object.keys(this.selection).length && data && data.selection && typeof data.selection === 'object') {
-          this.selection = data.selection;
+          this.selection = this._adopt(data.selection);
           this.save();
         }
       } catch (e) {
@@ -135,7 +179,7 @@ function makeStore() {
         const state = this.ensureState(nbId);
         for (const src of srcList) {
           await this.loadInsights(src.id);
-          src.has_insights = (this.cache.insights[src.id] || []).length > 0;
+          src.has_insights = (src.insights_count || 0) > 0 || (this.cache.insights[src.id] || []).length > 0;
           if (!state.sources[src.id]) {
             state.sources[src.id] = 'off';
           }
@@ -143,7 +187,7 @@ function makeStore() {
         for (const note of noteList) {
           if (state.notes[note.id] === undefined) state.notes[note.id] = true;
         }
-        this.save();
+        this.commit();
       } catch (e) {
         console.warn('[OpenNotebook] load notebook data failed:', e.message);
       }

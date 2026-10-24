@@ -20,7 +20,10 @@ from helpers.tool import Tool, Response
 from usr.plugins.open_notebook import config, client
 from usr.plugins.open_notebook.shared import handle_error, resolve_notebook_id
 from usr.plugins.open_notebook.api.context_selection import read_selection
-from usr.plugins.open_notebook.tools.context_selection import selection_to_context_config
+from usr.plugins.open_notebook.tools.context_selection import (
+    context_config_has_included,
+    selection_to_context_config,
+)
 from usr.plugins.open_notebook.tools.grounding import build_grounding
 
 # Hard cap on total grounding text per ask; over-budget sources are truncated with a warning.
@@ -155,6 +158,11 @@ class OpenNotebookChat(Tool):
                 context_config = selection_to_context_config(nb_selection)
             else:
                 context_config = self._sanitize_config(kwargs.get("context_config"))
+            if not context_config_has_included(context_config):
+                return Response(
+                    message="No sources or notes are selected for this notebook. Turn on a source in the Notebooks chip first.",
+                    break_loop=False,
+                )
             context_resp = await http_client.post(
                 f"{api_url}/api/chat/context",
                 json={"notebook_id": notebook_id, "context_config": context_config},

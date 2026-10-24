@@ -60,6 +60,32 @@ def selection_to_context_config(selection: dict) -> dict:
     return config
 
 
+def selection_to_explicit_context_config(
+    selection: dict, known_source_ids: list, known_note_ids: list
+) -> dict:
+    """Map selector state to a config that names every known id.
+
+    The backend treats an empty context_config as include-all, so unselected
+    sources and notes are sent explicitly as 'not in'.
+    """
+    base = selection_to_context_config(selection) if isinstance(selection, dict) else {}
+    sources = {str(sid): "not in" for sid in known_source_ids}
+    sources.update(base.get("sources") or {})
+    notes = {str(nid): "not in" for nid in known_note_ids}
+    notes.update(base.get("notes") or {})
+    return {"sources": sources, "notes": notes}
+
+
+def context_config_has_included(config: dict) -> bool:
+    """True when at least one source or note is set to something other than 'not in'."""
+    if not isinstance(config, dict):
+        return False
+    values = list((config.get("sources") or {}).values()) + list(
+        (config.get("notes") or {}).values()
+    )
+    return any(v != "not in" for v in values)
+
+
 def selected_insight_ids(selection: dict, source_id: str) -> set:
     """Return the enabled insight ids for one source."""
     if not isinstance(selection, dict):

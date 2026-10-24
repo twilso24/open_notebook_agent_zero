@@ -817,7 +817,7 @@ const model = {
         const sel = this.contextSelections;
         for (const src of (this.sources || [])) {
             if (sel.sources[src.id] === undefined) {
-                sel.sources[src.id] = (src.insights_count > 0) ? 'insights' : 'full';
+                sel.sources[src.id] = 'off';
                 changed = true;
             }
         }

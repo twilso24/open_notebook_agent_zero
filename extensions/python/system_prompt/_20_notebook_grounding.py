@@ -18,12 +18,25 @@ from agent import Agent, LoopData
 
 from usr.plugins.open_notebook import config, client, telemetry
 from usr.plugins.open_notebook.api.context_selection import read_selection
-from usr.plugins.open_notebook.tools.context_selection import selection_to_context_config
+from usr.plugins.open_notebook.tools.context_selection import (
+    context_config_has_included,
+    selection_to_explicit_context_config,
+)
 from usr.plugins.open_notebook.tools.grounding import build_grounding
 
-CACHE_KEY = "on_prompt_grounding_cache"
+CACHE_KEY = "on_prompt_grounding_cache_v2"
 GROUNDING_BUDGET = 20000
 MAX_NOTEBOOKS = 3
+
+
+def _as_list(data) -> list:
+    """Accept either a bare list or a {data: [...]} envelope."""
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        inner = data.get("data")
+        return inner if isinstance(inner, list) else []
+    return []
 
 
 class NotebookGrounding(Extension):
@@ -75,7 +88,18 @@ class NotebookGrounding(Extension):
             if budget <= 0:
                 warnings.append("notebook grounding budget reached; remaining notebooks skipped")
                 break
-            context_config = selection_to_context_config(nb_sel)
+            try:
+                known_sources, known_notes = await self._fetch_known_ids(
+                    http_client, api_url, nb_id
+                )
+            except Exception:
+                warnings.append(f"could not load source list for {nb_id}; notebook skipped")
+                continue
+            context_config = selection_to_explicit_context_config(
+                nb_sel, known_sources, known_notes
+            )
+            if not context_config_has_included(context_config):
+                continue
             resp = await http_client.post(
                 f"{api_url}/api/chat/context",
                 json={"notebook_id": nb_id, "context_config": context_config},
@@ -109,6 +133,21 @@ class NotebookGrounding(Extension):
 
         agent.context.data[CACHE_KEY] = {"grounding": {"digest": digest, "text": block}}
         return block
+
+    @staticmethod
+    async def _fetch_known_ids(http_client, api_url: str, nb_id: str):
+        """List the notebook's source and note ids so every one is sent explicitly."""
+        src_resp = await http_client.get(
+            f"{api_url}/api/sources?notebook_id={nb_id}"
+        )
+        src_resp.raise_for_status()
+        sources = _as_list(src_resp.json())
+        note_resp = await http_client.get(f"{api_url}/api/notes?notebook_id={nb_id}")
+        note_resp.raise_for_status()
+        notes = _as_list(note_resp.json())
+        source_ids = [str(s["id"]) for s in sources if isinstance(s, dict) and s.get("id")]
+        note_ids = [str(n["id"]) for n in notes if isinstance(n, dict) and n.get("id")]
+        return source_ids, note_ids
 
     @staticmethod
     def _digest(selection: dict) -> str:

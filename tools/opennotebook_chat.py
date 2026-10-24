@@ -147,13 +147,6 @@ class OpenNotebookChat(Tool):
 
         try:
             session_id = (kwargs.get("session_id") or "").strip()
-            if not session_id:
-                session_id = await self._create_session(http_client, api_url, notebook_id)
-            if not session_id:
-                return Response(
-                    message="Failed to create a chat session for this notebook.",
-                    break_loop=False,
-                )
 
             ctx_id = getattr(getattr(self.agent, "context", None), "id", "") or ""
             stored = read_selection(ctx_id) if ctx_id else {}

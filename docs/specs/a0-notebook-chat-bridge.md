@@ -17,7 +17,7 @@ User stories:
 ## Design
 - New agent tool `opennotebook_chat` in `tools/opennotebook_chat.py`, following the pattern of `opennotebook_query`.
 - Actions: `ask` (notebook_id, message, optional session_id, optional context_config), `history` (session_id), `new_session` (notebook_id).
-- `ask` without a session creates one; the returned response includes the session_id so follow-ups can continue it.
+- `ask` never creates a chat session. It loads grounding from the selected sources and returns the answer text. An optional `session_id` is accepted and echoed in the reply footer only. `new_session` and `history` remain as optional helpers for app-level conversations.
 - Default context: all sources at `full content`, all notes at `full content`, unless `context_config` overrides.
 - Notebook IDs may be given by name; resolve through the existing `resolve_notebook_id` helper.
 - Requests go through the existing client (`client.py`) so host, auth and error handling match other tools.

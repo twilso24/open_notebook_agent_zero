@@ -161,3 +161,9 @@ def test_panel_fixed_overlay_capped_to_chat_column():
     assert 'position: fixed' in panel_css
     assert 'left: 8px' in panel_css
     assert 'min(380px, calc(100vw - 16px))' in panel_css, 'panel width must be capped to the chat column'
+
+
+def test_new_sources_default_to_off():
+    src = STORE.read_text()
+    assert "state.sources[src.id] = 'off';" in src
+    assert "state.sources[src.id] = src.has_insights" not in src

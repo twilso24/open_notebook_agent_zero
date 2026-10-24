@@ -137,7 +137,7 @@ function makeStore() {
           await this.loadInsights(src.id);
           src.has_insights = (this.cache.insights[src.id] || []).length > 0;
           if (!state.sources[src.id]) {
-            state.sources[src.id] = src.has_insights ? 'insights' : 'full';
+            state.sources[src.id] = 'off';
           }
         }
         for (const note of noteList) {

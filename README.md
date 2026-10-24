@@ -42,7 +42,8 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 ### Notebook Chat Bridge
 - `opennotebook_chat:ask` answers from the notebook's selected sources, insights and notes. Agent Zero's own model writes the answer.
 - Selection comes from the Notebooks chip in the chat input: per-source Off / Full text / Insights, per-insight toggles, and note On/Off. It is stored per chat on the server.
-- Default per source: insights when present, otherwise full text capped at 8,000 characters. Total grounding is capped at 20,000 characters, with a warning when truncated.
+- Default per source: Off. New sources never switch on by themselves. Insights mode uses a source's existing insights when present, otherwise full text capped at 8,000 characters. Total grounding is capped at 20,000 characters, with a warning when truncated.
+- Only explicit selections are sent. Every known source and note is named in the request, and an empty selection is never sent as include-all.
 - No notebook LLM call is made per turn. The notebook's providers run only for transformations or podcast generation.
 - `ask` never creates a chat session. `new_session` and `history` remain for app-level conversations.
 
@@ -302,6 +303,7 @@ Key milestones from the commit history:
 | Commit | Description |
 |--------|-------------|
 | `0.5.0` | Grounded notebook chat from Agent Zero with no per-turn notebook LLM calls; chat input Notebooks context selector; `ask` no longer creates sessions |
+| `a0c5f22` | Fix: new sources default off and stay off; only explicit selections are grounded (empty config no longer means include-all); Insights button enables from `insights_count`; storage key v3 with legacy migration |
 | `audit-0.3.0` | **Audit fix: qualified imports, telemetry wiring, hooks.py, prompt action key, proxy config** |
 | `933d062` | Feature: inline note editing UI for existing notes (version 0.2.1) |
 | `e8c425b` | Fix rename notebook/session: replace `prompt()` with inline UI |

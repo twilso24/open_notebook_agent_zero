@@ -132,6 +132,10 @@ const model = {
     chatLoading: false,
     chatSessions: [],
     chatContext: null,
+    contextSelections: { sources: {}, notes: {} },
+    insightSelections: {},
+    chatContextInsights: {},
+    showChatContextPanel: false,
 
     // Source chat
     sourceChatSessionId: null,
@@ -315,6 +319,7 @@ const model = {
             if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
             this.selectedNotebook = await resp.json();
             await this.loadSources();
+            this.loadContextSelections();
         } catch (e) {
             this.error = `Failed to load notebook: ${e.message}`;
             this.selectedNotebook = null;
@@ -772,6 +777,161 @@ const model = {
         }
     },
 
+    // ── Chat context selections (per notebook, persisted) ──
+    _contextStorageKey() {
+        return `open_notebook:context:${this.selectedNotebookId || 'none'}`;
+    },
+
+    loadContextSelections() {
+        try {
+            const raw = localStorage.getItem(this._contextStorageKey());
+            const parsed = raw ? JSON.parse(raw) : null;
+            this.contextSelections = {
+                sources: (parsed && parsed.sources) || {},
+                notes: (parsed && parsed.notes) || {},
+            };
+            this.insightSelections = (parsed && parsed.insights) || {};
+        } catch (e) {
+            console.warn('[OpenNotebook] Load context selections failed:', e.message);
+            this.contextSelections = { sources: {}, notes: {} };
+            this.insightSelections = {};
+        }
+        this.applyContextDefaults();
+    },
+
+    saveContextSelections() {
+        try {
+            localStorage.setItem(this._contextStorageKey(), JSON.stringify({
+                sources: this.contextSelections.sources,
+                notes: this.contextSelections.notes,
+                insights: this.insightSelections,
+            }));
+        } catch (e) {
+            console.warn('[OpenNotebook] Save context selections failed:', e.message);
+        }
+    },
+
+    // New items default to insights when available, else full content.
+    applyContextDefaults() {
+        let changed = false;
+        const sel = this.contextSelections;
+        for (const src of (this.sources || [])) {
+            if (sel.sources[src.id] === undefined) {
+                sel.sources[src.id] = (src.insights_count > 0) ? 'insights' : 'full';
+                changed = true;
+            }
+        }
+        for (const note of (this.notes || [])) {
+            if (sel.notes[note.id] === undefined) {
+                sel.notes[note.id] = 'full';
+                changed = true;
+            }
+        }
+        if (changed) this.saveContextSelections();
+    },
+
+    setSourceContextMode(sourceId, mode) {
+        if (!sourceId) return;
+        this.contextSelections.sources[sourceId] = mode;
+        this.saveContextSelections();
+        this.buildChatContext();
+    },
+
+    setInsightContextEnabled(insightId, enabled) {
+        if (!insightId) return;
+        this.insightSelections[insightId] = !!enabled;
+        this.saveContextSelections();
+        this.buildChatContext();
+    },
+
+    async loadChatContextInsights(sourceId) {
+        if (!sourceId) return;
+        try {
+            const resp = await smartFetch(`/api/sources/${encodeURIComponent(sourceId)}/insights`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+            const data = await resp.json();
+            this.chatContextInsights[sourceId] = Array.isArray(data) ? data : [];
+            this.buildChatContext();
+        } catch (e) {
+            console.warn('[OpenNotebook] Load chat context insights failed:', e.message);
+            this.chatContextInsights[sourceId] = [];
+        }
+    },
+
+    toggleChatContextPanel() {
+        this.showChatContextPanel = !this.showChatContextPanel;
+        if (this.showChatContextPanel) {
+            for (const src of (this.sources || [])) {
+                if (this.contextSelections.sources[src.id] === 'insights') {
+                    this.loadChatContextInsights(src.id);
+                }
+            }
+        }
+    },
+
+    setNoteContextMode(noteId, mode) {
+        if (!noteId) return;
+        this.contextSelections.notes[noteId] = mode;
+        this.saveContextSelections();
+        this.buildChatContext();
+    },
+
+    applyBulkSourceContext(action) {
+        for (const src of (this.sources || [])) {
+            const hasInsights = (src.insights_count || 0) > 0;
+            if (action === 'exclude') {
+                this.contextSelections.sources[src.id] = 'off';
+            } else if (action === 'full') {
+                this.contextSelections.sources[src.id] = 'full';
+            } else if (action === 'insights') {
+                this.contextSelections.sources[src.id] = hasInsights ? 'insights' : 'off';
+            } else {
+                this.contextSelections.sources[src.id] = hasInsights ? 'insights' : 'full';
+            }
+        }
+        this.saveContextSelections();
+        this.buildChatContext();
+    },
+
+    applyBulkNoteContext(action) {
+        for (const note of (this.notes || [])) {
+            this.contextSelections.notes[note.id] = action === 'exclude' ? 'off' : 'full';
+        }
+        this.saveContextSelections();
+        this.buildChatContext();
+    },
+
+    get sourcesInsightsCount() {
+        return Object.values(this.contextSelections.sources || {}).filter(m => m === 'insights').length;
+    },
+
+    get sourcesFullCount() {
+        return Object.values(this.contextSelections.sources || {}).filter(m => m === 'full').length;
+    },
+
+    get enabledInsightsCount() {
+        const srcs = (this.chatContext && this.chatContext.sources) || [];
+        return srcs
+            .filter(s => this.contextSelections.sources[s.id] === 'insights')
+            .reduce((n, s) => n + (s.insights || []).filter(i => this.insightSelections[i.id] !== false).length, 0);
+    },
+
+    get notesIncludedCount() {
+        return Object.values(this.contextSelections.notes || {}).filter(m => m === 'full').length;
+    },
+
+    // Map UI modes to the backend status strings it matches by substring.
+    _contextConfigPayload() {
+        const payload = { sources: {}, notes: {} };
+        for (const [id, mode] of Object.entries(this.contextSelections.sources || {})) {
+            payload.sources[id] = mode === 'insights' ? 'insights' : (mode === 'full' ? 'full content' : 'not in');
+        }
+        for (const [id, mode] of Object.entries(this.contextSelections.notes || {})) {
+            payload.notes[id] = mode === 'full' ? 'full content' : 'not in';
+        }
+        return payload;
+    },
+
     async buildChatContext() {
         if (!this.selectedNotebookId) return;
         try {
@@ -779,7 +939,7 @@ const model = {
                 method: 'POST',
                 body: JSON.stringify({
                     notebook_id: this.selectedNotebookId,
-                    context_config: {},
+                    context_config: this._contextConfigPayload(),
                 }),
             });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
@@ -789,6 +949,66 @@ const model = {
             console.warn('[OpenNotebook] Build context failed:', e.message);
             this.chatContext = {};
         }
+    },
+
+    // Render the backend context object as the Markdown text the chat prompt expects.
+    // Mirrors format_source_context() in open_notebook/utils/context_builder.py.
+    renderChatContextText(ctx) {
+        const parts = [];
+        const sources = (ctx && ctx.sources) || [];
+        const notes = (ctx && ctx.notes) || [];
+        if (sources.length) {
+            parts.push('## SOURCE CONTENT');
+            for (const src of sources) {
+                parts.push(`**Source ID:** ${src.id || 'Unknown'}`);
+                parts.push(`**Title:** ${src.title || 'No title'}`);
+                const text = src.full_text || src.content || '';
+                parts.push(`**Content:**\n${text || '[Source text is unavailable in this context.]'}`);
+                parts.push('');
+            }
+            const insights = sources.flatMap(s => (this.contextSelections.sources[s.id] === 'insights' ? (s.insights || []) : []).filter(i => this.insightSelections[i.id] !== false).map(i => ({ ...i, _source: s })));
+            if (insights.length) {
+                parts.push('## SOURCE INSIGHTS');
+                for (const ins of insights) {
+                    parts.push(`**Insight ID:** ${ins.id || 'Unknown'}`);
+                    parts.push(`**Type:** ${ins.insight_type || 'Unknown'}`);
+                    parts.push(`**Content:** ${ins.content || 'No content'}`);
+                    parts.push('');
+                }
+            }
+        }
+        if (notes.length) {
+            parts.push('## NOTES');
+            for (const note of notes) {
+                parts.push(`**Note ID:** ${note.id || 'Unknown'}`);
+                parts.push(`**Title:** ${note.title || 'Untitled'}`);
+                parts.push(`**Content:** ${note.content || ''}`);
+                parts.push('');
+            }
+        }
+        return parts.join('\n');
+    },
+
+    // Build the context object the chat API expects. Only enabled items are included.
+    buildChatContextPayload(ctx) {
+        const payload = { sources: [], notes: [] };
+        if (!ctx) return payload;
+        for (const src of (ctx.sources || [])) {
+            const mode = this.contextSelections.sources[src.id];
+            if (mode === 'off' || !mode) continue;
+            const item = { id: src.id, title: src.title || 'No title' };
+            if (mode === 'full') {
+                item.full_text = src.full_text || src.content || '';
+            } else if (mode === 'insights') {
+                item.insights = (src.insights || []).filter(i => this.insightSelections[i.id] !== false);
+            }
+            payload.sources.push(item);
+        }
+        for (const note of (ctx.notes || [])) {
+            if (this.contextSelections.notes[note.id] === 'off') continue;
+            payload.notes.push({ id: note.id, title: note.title || 'Untitled', content: note.content || '' });
+        }
+        return payload;
     },
 
     async sendChatMessage() {
@@ -816,7 +1036,7 @@ const model = {
                 body: JSON.stringify({
                     session_id: this.chatSessionId,
                     message: userMsg,
-                    context: this.chatContext || {},
+                    context: this.buildChatContextPayload(this.chatContext || {}),
                 }),
             });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);

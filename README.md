@@ -31,6 +31,14 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 - Confirmation gates on destructive operations
 - Inline editing — edit note title and content from the ⋮ menu in the Notes tab
 
+### Chat Context
+- Chat window context panel (Chat tab → **Context** button) controls what a notebook chat can see
+- Each source can be set to **Off**, **Full text**, or **Insights**; in Insights mode each insight toggles individually
+- Each note toggles **On** or **Off** independently
+- Footer counts enabled insights, full-text sources, and included notes
+- Selections persist per notebook in browser storage and are restored on reload
+- Chat requests send only the enabled items as a structured context object
+
 ### Name-Based Lookup
 - Fuzzy search for sources and notes by name within a notebook
 - Case-insensitive, partial-match support

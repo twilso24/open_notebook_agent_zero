@@ -4,7 +4,7 @@
 
 > **Browse notebooks, manage sources, take notes, find content by name, and generate AI podcast episodes — all from the Agent Zero sidebar.**
 
-A knowledge management plugin that bridges [Open Notebook](https://github.com/lfnovo/open-notebook) into Agent Zero's WebUI, providing a full sidebar panel with notebook browsing, source management, notes CRUD, name-based fuzzy lookup, and async podcast generation.
+A knowledge management plugin that bridges [Open Notebook](https://github.com/lfnovo/open-notebook) into Agent Zero's WebUI, providing a full sidebar panel with notebook browsing, source management, notes CRUD, name-based lookup, and async podcast generation.
 
 ---
 
@@ -14,7 +14,7 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 - Browse all notebooks with source/note counts and last-updated timestamps
 - Hierarchical tree view for a bird's-eye overview
 - Create notebooks from chat or sidebar — natural-language requests like `create a notebook named tester` and `open notebook tester` map to the create flow automatically
-- Name-based fuzzy resolution (case-insensitive, emoji-stripped) across all tools
+- Name-based resolution for notebooks (case-insensitive, emoji-stripped); case-insensitive substring matching for source and note names
 - Inline rename UI (no browser `prompt()` dialogs)
 
 ### Sources
@@ -48,8 +48,8 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 - `ask` never creates a chat session. `new_session` and `history` remain for app-level conversations.
 
 ### Name-Based Lookup
-- Fuzzy search for sources and notes by name within a notebook
-- Case-insensitive, partial-match support
+- Substring search for sources and notes by name within a notebook
+- Case-insensitive; the query may match a title or a title may contain the query
 - Returns unified results with type, name, ID, and status
 
 ### Podcast Generation
@@ -171,7 +171,7 @@ Environment variable `OPEN_NOTEBOOK_API_URL` overrides `api_url` if set.
 | `opennotebook_manage` | `status`, `config`, `create` | Check connectivity, view settings, create notebooks |
 | `opennotebook_sources` | `list`, `add`, `read`, `delete` | Manage content sources with auto-type detection |
 | `opennotebook_notes` | `list`, `create`, `read`, `update`, `delete` | Full CRUD for notebook notes |
-| `opennotebook_query` | `find` | Name-based fuzzy lookup for sources and notes |
+| `opennotebook_query` | `find` | Name-based substring lookup for sources and notes |
 | `opennotebook_chat` | `ask`, `history`, `new_session`, `search` | Chat with a notebook using grounded context, with no notebook LLM call per turn |
 | `opennotebook_podcasts` | `profiles`, `list`, `get`, `generate`, `status`, `retry`, `delete` | Async podcast episode generation and management |
 
@@ -342,7 +342,7 @@ open_notebook/
 │   ├── opennotebook_manage.py     # Status, config, create (215 lines)
 │   ├── opennotebook_sources.py    # Source management (785 lines)
 │   ├── opennotebook_notes.py      # Notes CRUD (536 lines)
-│   ├── opennotebook_query.py      # Name-based lookup (174 lines)
+│   ├── opennotebook_query.py      # Name-based lookup (159 lines)
 │   ├── opennotebook_podcasts.py   # Podcast generation (654 lines)
 │
 ├── prompts/default/               # Agent tool descriptions (6 files)

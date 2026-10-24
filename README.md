@@ -1,6 +1,6 @@
 # 🎙️ Open Notebook Plugin for Agent Zero
 
-> **Version: 0.3.0**
+> **Version: 0.4.0**
 
 > **Browse notebooks, manage sources, take notes, find content by name, and generate AI podcast episodes — all from the Agent Zero sidebar.**
 

@@ -1,6 +1,6 @@
 # 🎙️ Open Notebook Plugin for Agent Zero
 
-> **Version: 0.4.0**
+> **Version: 0.5.0**
 
 > **Browse notebooks, manage sources, take notes, find content by name, and generate AI podcast episodes — all from the Agent Zero sidebar.**
 
@@ -38,6 +38,13 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 - Footer counts enabled insights, full-text sources, and included notes
 - Selections persist per notebook in browser storage and are restored on reload
 - Chat requests send only the enabled items as a structured context object
+
+### Notebook Chat Bridge
+- `opennotebook_chat:ask` answers from the notebook's selected sources, insights and notes. Agent Zero's own model writes the answer.
+- Selection comes from the Notebooks chip in the chat input: per-source Off / Full text / Insights, per-insight toggles, and note On/Off. It is stored per chat on the server.
+- Default per source: insights when present, otherwise full text capped at 8,000 characters. Total grounding is capped at 20,000 characters, with a warning when truncated.
+- No notebook LLM call is made per turn. The notebook's providers run only for transformations or podcast generation.
+- `ask` never creates a chat session. `new_session` and `history` remain for app-level conversations.
 
 ### Name-Based Lookup
 - Fuzzy search for sources and notes by name within a notebook
@@ -99,7 +106,7 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 
 | Component | File(s) | Purpose |
 |-----------|---------|---------|
-| **Tools** (6) | `tools/opennotebook_*.py` | Agent-facing tools with method routing |
+| **Tools** (7) | `tools/opennotebook_*.py` | Agent-facing tools with method routing |
 | **Reverse Proxy** | `api/proxy.py` | Bridges frontend ↔ Open Notebook backend |
 | **HTTP Client** | `client.py` | Lazy-singleton `httpx.AsyncClient` with pooling |
 | **Config** | `config.py`, `default_config.yaml` | Typed settings with env-var fallback |
@@ -164,6 +171,7 @@ Environment variable `OPEN_NOTEBOOK_API_URL` overrides `api_url` if set.
 | `opennotebook_sources` | `list`, `add`, `read`, `delete` | Manage content sources with auto-type detection |
 | `opennotebook_notes` | `list`, `create`, `read`, `update`, `delete` | Full CRUD for notebook notes |
 | `opennotebook_query` | `find` | Name-based fuzzy lookup for sources and notes |
+| `opennotebook_chat` | `ask`, `history`, `new_session`, `search` | Chat with a notebook using grounded context, with no notebook LLM call per turn |
 | `opennotebook_podcasts` | `profiles`, `list`, `get`, `generate`, `status`, `retry`, `delete` | Async podcast episode generation and management |
 
 ### Skills
@@ -293,6 +301,7 @@ Key milestones from the commit history:
 
 | Commit | Description |
 |--------|-------------|
+| `0.5.0` | Grounded notebook chat from Agent Zero with no per-turn notebook LLM calls; chat input Notebooks context selector; `ask` no longer creates sessions |
 | `audit-0.3.0` | **Audit fix: qualified imports, telemetry wiring, hooks.py, prompt action key, proxy config** |
 | `933d062` | Feature: inline note editing UI for existing notes (version 0.2.1) |
 | `e8c425b` | Fix rename notebook/session: replace `prompt()` with inline UI |

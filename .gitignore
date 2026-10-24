@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 tests/
 VALIDATION_CHECKLIST.md
+
+# runtime selection state
+data/

@@ -1,0 +1,158 @@
+<script type="module">
+  import { store } from "/plugins/open_notebook/webui/a0-context-store-v2.js";
+</script>
+
+<div x-data
+     class="on-ctx-chip-root"
+     x-init="$store.openNotebookContext.onMount()">
+
+  <button type="button"
+          class="on-ctx-chip"
+          :class="{ 'on-ctx-chip--active': $store.openNotebookContext.selectedCount > 0 }"
+          @click="$event.stopPropagation(); $store.openNotebookContext.toggleOpen()"
+          :title="$store.openNotebookContext.chipTitle"
+          aria-label="Open Notebook context">
+    <x-icon name="menu_book" aria-hidden="true"></x-icon>
+    <span class="on-ctx-chip__label">Notebooks</span>
+    <span class="on-ctx-chip__count" x-show="$store.openNotebookContext.selectedCount > 0"
+          x-text="$store.openNotebookContext.selectedCount"></span>
+  </button>
+  <span class="on-ctx-chip__error" x-show="$store.openNotebookContext.storeError"
+        x-text="$store.openNotebookContext.storeError"></span>
+
+  <template x-if="$store.openNotebookContext.isOpen">
+    <div class="on-ctx-panel">
+      <div class="on-ctx-panel__head">
+        <span class="on-ctx-panel__title">Chat Context</span>
+        <button type="button" class="on-ctx-panel__close" @click="$store.openNotebookContext.close()" aria-label="Close">
+          <x-icon name="close" aria-hidden="true"></x-icon>
+        </button>
+      </div>
+
+      <div class="on-ctx-panel__body">
+        <div class="on-ctx-panel__empty" x-show="$store.openNotebookContext.storeError"
+             x-text="$store.openNotebookContext.storeError" style="color:#f66;"></div>
+        <template x-if="$store.openNotebookContext.loadingNotebooks">
+          <div class="on-ctx-panel__empty">Loading notebooks…</div>
+        </template>
+
+        <template x-for="nb in $store.openNotebookContext.notebooks" :key="nb.id">
+          <div class="on-ctx-nb">
+            <button type="button" class="on-ctx-nb__row" role="checkbox"
+                    :aria-checked="$store.openNotebookContext.isNotebookSelected(nb.id)"
+                    @click.prevent.stop="$store.openNotebookContext.toggleNotebook(nb.id)">
+              <span class="on-ctx-nb__box" :class="{ 'is-on': $store.openNotebookContext.isNotebookSelected(nb.id) }" aria-hidden="true"></span>
+              <span x-text="nb.name"></span>
+            </button>
+
+            <template x-if="$store.openNotebookContext.isNotebookSelected(nb.id)">
+              <div class="on-ctx-nb__detail">
+                <div class="on-ctx-section">Sources</div>
+                <template x-for="src in $store.openNotebookContext.sourcesFor(nb.id)" :key="src.id">
+                  <div class="on-ctx-item">
+                    <span class="on-ctx-item__title" x-text="src.title" :title="src.title"></span>
+                    <div class="on-ctx-modes">
+                      <button type="button" class="on-ctx-mode"
+                              :class="{ 'is-on': $store.openNotebookContext.sourceMode(nb.id, src.id) === 'off' }"
+                              @click="$store.openNotebookContext.setSourceMode(nb.id, src.id, 'off')">Off</button>
+                      <button type="button" class="on-ctx-mode"
+                              :class="{ 'is-on': $store.openNotebookContext.sourceMode(nb.id, src.id) === 'full' }"
+                              @click="$store.openNotebookContext.setSourceMode(nb.id, src.id, 'full')">Full</button>
+                      <button type="button" class="on-ctx-mode"
+                              :class="{ 'is-on': $store.openNotebookContext.sourceMode(nb.id, src.id) === 'insights' }"
+                              @click="$store.openNotebookContext.setSourceMode(nb.id, src.id, 'insights')"
+                              :disabled="!src.has_insights">Insights</button>
+                    </div>
+                  </div>
+
+                  <template x-if="$store.openNotebookContext.sourceMode(nb.id, src.id) === 'insights'">
+                    <div class="on-ctx-insights">
+                      <template x-for="ins in $store.openNotebookContext.insightsFor(nb.id, src.id)" :key="ins.id">
+                        <label class="on-ctx-insight">
+                          <input type="checkbox"
+                                 :checked="$store.openNotebookContext.isInsightEnabled(nb.id, src.id, ins.id)"
+                                 @change="$store.openNotebookContext.toggleInsight(nb.id, src.id, ins.id)" />
+                          <span x-text="ins.insight_type || ins.type || ins.id"></span>
+                        </label>
+                      </template>
+                    </div>
+                  </template>
+                </template>
+
+                <div class="on-ctx-section">Notes</div>
+                <template x-for="note in $store.openNotebookContext.notesFor(nb.id)" :key="note.id">
+                  <label class="on-ctx-item on-ctx-item--note">
+                    <input type="checkbox"
+                           :checked="$store.openNotebookContext.isNoteEnabled(nb.id, note.id)"
+                           @change="$store.openNotebookContext.toggleNote(nb.id, note.id)" />
+                    <span class="on-ctx-item__title" x-text="note.title" :title="note.title"></span>
+                  </label>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <div class="on-ctx-panel__foot">
+        <span class="on-ctx-counts" x-text="$store.openNotebookContext.countsLabel"></span>
+      </div>
+    </div>
+  </template>
+</div>
+
+<style>
+  .on-ctx-chip-root { position: relative; display: inline-flex; }
+  .on-ctx-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 1.75rem; box-sizing: border-box; flex-shrink: 0; white-space: nowrap;
+    padding: 0 10px; border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-background-secondary);
+    color: var(--color-text); font-size: 0.8em; cursor: pointer;
+  }
+  .on-ctx-chip--active { border-color: var(--color-highlight); }
+  .on-ctx-chip__label { font-weight: 400; }
+  .on-ctx-chip__count {
+    background: var(--color-highlight); color: #000;
+    border-radius: 999px; padding: 0 6px; font-weight: 600;
+  }
+  .on-ctx-chip__error { color: #f66; font-size: 0.7em; }
+  .on-ctx-panel {
+    position: fixed; bottom: 56px; left: 8px;
+    width: min(380px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: 60vh; overflow: auto;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    z-index: 1200; padding: 8px;
+  }
+  .on-ctx-panel__head { display: flex; justify-content: space-between; align-items: center; padding: 4px 4px 8px; }
+  .on-ctx-panel__title { font-weight: 600; font-size: 0.9em; }
+  .on-ctx-panel__close { background: none; border: none; color: var(--color-text); cursor: pointer; }
+  .on-ctx-panel__empty { padding: 12px; text-align: center; opacity: 0.7; font-size: 0.85em; }
+  .on-ctx-nb { border-top: 1px solid var(--color-border); padding: 6px 4px; }
+  .on-ctx-nb__row {
+    display: flex; gap: 8px; align-items: center; font-size: 0.85em; cursor: pointer;
+    width: 100%; padding: 6px 4px; margin: 0; border: 0; background: none;
+    color: var(--color-text); text-align: left; touch-action: manipulation;
+  }
+  .on-ctx-nb__box { width: 14px; height: 14px; border: 1px solid var(--color-border); border-radius: 3px; flex-shrink: 0; }
+  .on-ctx-nb__box.is-on { background: var(--color-highlight); border-color: var(--color-highlight); }
+  .on-ctx-nb__detail { margin: 6px 0 0 20px; }
+  .on-ctx-section { font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; margin: 8px 0 4px; }
+  .on-ctx-item { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 2px 0; }
+  .on-ctx-item--note { justify-content: flex-start; gap: 8px; font-size: 0.82em; }
+  .on-ctx-item__title { font-size: 0.8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+  .on-ctx-modes { display: inline-flex; gap: 2px; flex-shrink: 0; }
+  .on-ctx-mode {
+    font-size: 0.72em; padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-background-secondary); color: var(--color-text); cursor: pointer;
+  }
+  .on-ctx-mode.is-on { background: var(--color-highlight); color: #000; border-color: var(--color-highlight); }
+  .on-ctx-mode:disabled { opacity: 0.35; cursor: not-allowed; }
+  .on-ctx-insights { margin: 2px 0 6px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .on-ctx-insight { display: flex; gap: 6px; align-items: center; font-size: 0.76em; }
+  .on-ctx-panel__foot { border-top: 1px solid var(--color-border); padding: 6px 4px 2px; }
+  .on-ctx-counts { font-size: 0.75em; opacity: 0.75; }
+</style>

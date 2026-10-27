@@ -283,7 +283,7 @@
 
             <!-- Source Insights Panel -->
             <div x-show="&#36;store.openNotebookStore?.showSourceInsights" x-transition style="display:none;padding:8px 12px">
-                <div class="on-card" style="border-color:var(--color-secondary)">
+                <div class="on-card on-insights-panel" style="border-color:var(--color-secondary)">
                     <div class="on-section-header" style="display:flex;justify-content:space-between;align-items:center">
                         <span>Insights</span>
                         <button class="on-btn on-btn--ghost" @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.showSourceInsights = false, &#36;store.openNotebookStore.activeInsightSourceId = null)">✕</button>

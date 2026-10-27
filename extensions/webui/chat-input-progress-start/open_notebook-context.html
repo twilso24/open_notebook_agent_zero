@@ -60,8 +60,7 @@
                               @click="$store.openNotebookContext.setSourceMode(nb.id, src.id, 'full')">Full</button>
                       <button type="button" class="on-ctx-mode"
                               :class="{ 'is-on': $store.openNotebookContext.sourceMode(nb.id, src.id) === 'insights' }"
-                              @click="$store.openNotebookContext.setSourceMode(nb.id, src.id, 'insights')"
-                              :disabled="!src.has_insights">Insights</button>
+                              @click="$store.openNotebookContext.setSourceMode(nb.id, src.id, 'insights')">Insights</button>
                     </div>
                   </div>
 

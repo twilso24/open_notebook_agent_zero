@@ -1292,6 +1292,17 @@ body.on-panel-active #left-panel {
   border-left: none !important;
 }
 
+/* --- Mobile tap targets: menu triggers (44px minimum) --- */
+@media (max-width: 768px) {
+  .on-menu-trigger {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* --- Mobile / Responsive --- */
 @media (max-width: 480px) {
   .on-canvas-content {

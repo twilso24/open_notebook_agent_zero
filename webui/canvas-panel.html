@@ -198,7 +198,7 @@
                                 <div class="on-card__title" x-text="nb.name"></div>
                                 <div class="on-card__meta" x-text="nb.description || nb.path || ''"></div>
                             </div>
-                            <button class="on-btn on-btn--ghost" style="flex-shrink:0"
+                            <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
                             @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = nb.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 160})">⋮</button>
                     <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === nb.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
                         <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.startRename(nb.id, nb.name)">Rename</button>
@@ -387,7 +387,6 @@
                                 </template>
                                 <div style="display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid var(--color-border);padding-top:6px;margin-top:4px">
                                     <button class="on-btn on-btn--ghost" style="font-size:0.82em;padding:3px 8px" @click="&#36;store.openNotebookStore?.openSourceChat(&#36;store.openNotebookStore?.activeSourceDetailId)">💬 Chat</button>
-                                    
                                     <button class="on-btn on-btn--ghost" style="font-size:0.82em;padding:3px 8px" @click="&#36;store.openNotebookStore?.sendSourceToChat(&#36;store.openNotebookStore?.activeSourceDetailId)">→ A0 Chat</button>
                                 </div>
                             </div>
@@ -434,7 +433,7 @@
                             <span class="on-badge" :class="source.type === 'link' ? 'on-badge--url' : (source.type === 'text' ? 'on-badge--text' : 'on-badge--file')" x-text="source.type"></span>
                             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" x-text="source.title || source.name || 'Untitled'"></span>
                         </div>
-                        <button class="on-btn on-btn--ghost" style="flex-shrink:0"
+                        <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
                                 @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'src-' + source.id, &#36;store.openNotebookStore._menuPos = {top: Math.max(8, Math.min(&#36;event.clientY, window.innerHeight - 240)), left: Math.max(8, &#36;event.clientX - 180)})">⋮</button>
                         <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'src-' + source.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none" :style="{ top: (&#36;store.openNotebookStore?._menuPos?.top ?? 0) + 'px', left: (&#36;store.openNotebookStore?._menuPos?.left ?? 0) + 'px', position: 'fixed' }">
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.openSourceDetail(source.id); &#36;store.openNotebookStore._activeMenuId = null">📋 Details</button>
@@ -508,7 +507,7 @@
                                 <div style="flex:1;min-width:0">
                                     <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" x-text="note.title || 'Untitled'"></div>
                                 </div>
-                                <button class="on-btn on-btn--ghost" style="flex-shrink:0"
+                                <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
                                         @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'note-' + note.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
                             </div>
                             <div style="font-size:0.85em;color:var(--color-text-muted);margin-top:4px;max-height:120px;overflow-y:auto;padding-left:4px"
@@ -543,7 +542,7 @@
                             <div class="on-card__title" style="font-size:0.9em" x-text="ep.name || ep.title || 'Untitled'"></div>
                             <div class="on-card__meta" x-text="ep.created_at ? new Date(ep.created_at).toLocaleDateString() : ''"></div>
                         </div>
-                        <button class="on-btn on-btn--ghost" style="flex-shrink:0"
+                        <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
                                 @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'ep-' + ep.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
                         <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'ep-' + ep.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.sendPodcastToChat(ep.id); &#36;store.openNotebookStore._activeMenuId = null">→ A0 Chat</button>
@@ -587,7 +586,7 @@
                                         <div style="font-weight:500" x-text="sess.title || 'Untitled'"></div>
                                         <div style="font-size:0.8em;color:var(--color-text-muted)" x-text="sess.created_at ? new Date(sess.created_at).toLocaleDateString() : ''"></div>
                                     </div>
-                                    <button class="on-btn on-btn--ghost" style="flex-shrink:0"
+                                    <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
                                     @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'sess-' + sess.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
                             <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'sess-' + sess.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
                                 <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.startChatSessionRename(sess.id, sess.title)">Rename</button>

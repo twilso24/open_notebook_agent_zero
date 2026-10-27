@@ -203,11 +203,17 @@ const model = {
 
     // Source insights
     sourceInsights: [],
+    // Shared insight data cache (single source of truth, keyed by sourceId).
+    // a0-context-store-v2.js delegates to this instead of fetching separately.
+    insightCache: {},
     showSourceInsights: false,
     activeInsightSourceId: null,
     _expandedInsights: {},
     transformations: [],
-    selectedTransformationId: '',
+    selectedPresetId: '',
+    insightsLoading: {},
+    insightsError: {},
+    presetsError: null,
     // Resize state
     panelWidth: 420,
     isDragging: false,
@@ -618,56 +624,92 @@ const model = {
     },
 
     // ── Source Insights ───────────────────────────────────
-    async getSourceInsights(sourceId) {
-        if (!this.selectedTransformationId) {
-            this.error = 'Please select a transformation first.';
-            return;
+    async loadInsights(srcId) {
+        if (this.insightCache[srcId]) return;
+        try {
+            const resp = await smartFetch('/api/sources/' + encodeURIComponent(srcId) + '/insights');
+            if (resp.ok) {
+                const data = await resp.json();
+                this.insightCache = { ...this.insightCache, [srcId]: Array.isArray(data) ? data : (data.data || []) };
+            } else {
+                this.insightCache = { ...this.insightCache, [srcId]: [] };
+            }
+        } catch (e) {
+            this.insightCache = { ...this.insightCache, [srcId]: [] };
         }
-        this.loading = true;
-        this.error = null;
+    },
+
+    insightsFor(srcId) {
+        return this.insightCache[srcId] || [];
+    },
+
+    async getSourceInsights(sourceId) {
+        this.insightsLoading = { ...this.insightsLoading, [sourceId]: true };
+        this.insightsError = { ...this.insightsError, [sourceId]: null };
         this.activeInsightSourceId = sourceId;
         this.sourceInsights = [];
+        if (!this.transformations.length) await this.loadTransformations();
         try {
-            // First, try to get existing insights
-            let getResp = await smartFetch('/api/sources/' + sourceId + '/insights');
+            // Load existing insights only. Creation goes through createSourceInsight.
+            const getResp = await smartFetch('/api/sources/' + sourceId + '/insights');
             if (getResp.ok) {
                 const existing = await getResp.json();
-                if (Array.isArray(existing) && existing.length > 0) {
+                if (Array.isArray(existing)) {
                     this.sourceInsights = existing;
-                    this.showSourceInsights = true;
-                    this.loading = false;
-                    return;
+                    // Mirror into the shared cache so v2 reads the same data.
+                    this.insightCache = { ...this.insightCache, [sourceId]: existing };
                 }
             }
-            // No existing insights — generate new ones
+            this.showSourceInsights = true;
+        } catch (e) {
+            this.insightsError = { ...this.insightsError, [sourceId]: e.message };
+            this.sourceInsights = [];
+        } finally {
+            this.insightsLoading = { ...this.insightsLoading, [sourceId]: false };
+        }
+    },
+
+    // Create an insight from a chosen preset, even when insights already exist.
+    async createSourceInsight(sourceId, transformationId) {
+        if (!sourceId || !transformationId) {
+            this.insightsError = { ...this.insightsError, [sourceId]: 'Choose an insight preset to create an insight.' };
+            return;
+        }
+        if (this.insightsLoading[sourceId]) return;
+        this.insightsLoading = { ...this.insightsLoading, [sourceId]: true };
+        this.insightsError = { ...this.insightsError, [sourceId]: null };
+        this.activeInsightSourceId = sourceId;
+        try {
             const postResp = await smartFetch('/api/sources/' + sourceId + '/insights', {
                 method: 'POST',
-                body: JSON.stringify({ transformation_id: this.selectedTransformationId })
+                body: JSON.stringify({ transformation_id: transformationId })
             });
             if (!postResp.ok) {
                 const errText = await postResp.text();
-                throw new Error('Failed to generate insights: ' + errText);
+                throw new Error('Failed to create insight: ' + errText);
             }
-            // API returns 202 (async) — poll GET until insights appear
-            const maxAttempts = 30;
-            const delay = 2000;
-            for (let i = 0; i < maxAttempts; i++) {
-                await new Promise(r => setTimeout(r, delay));
+            let found = false;
+            for (let i = 0; i < 30 && !found; i++) {
+                await new Promise(r => setTimeout(r, 2000));
                 const pollResp = await smartFetch('/api/sources/' + sourceId + '/insights');
                 if (pollResp.ok) {
                     const data = await pollResp.json();
                     if (Array.isArray(data) && data.length > 0) {
                         this.sourceInsights = data;
-                        break;
+                        // Mirror into the shared cache so v2 reads the same data.
+                        this.insightCache = { ...this.insightCache, [sourceId]: data };
+                        found = true;
                     }
                 }
             }
+            if (!found) {
+                throw new Error('Insight generation timed out after 60 seconds. Try again.');
+            }
             this.showSourceInsights = true;
         } catch (e) {
-            this.error = e.message;
-            this.sourceInsights = [];
+            this.insightsError = { ...this.insightsError, [sourceId]: e.message };
         } finally {
-            this.loading = false;
+            this.insightsLoading = { ...this.insightsLoading, [sourceId]: false };
         }
     },
 
@@ -705,11 +747,12 @@ const model = {
             if (!resp.ok) throw new Error('Failed to load transformations');
             const transforms = await resp.json();
             this.transformations = transforms;
+            this.presetsError = null;
             const defaultTransform = transforms.find(t => t.apply_default);
-            if (defaultTransform) this.selectedTransformationId = defaultTransform.id;
-            else if (transforms.length) this.selectedTransformationId = transforms[0].id;
+            if (defaultTransform) this.selectedPresetId = defaultTransform.id;
+            else if (transforms.length) this.selectedPresetId = transforms[0].id;
         } catch (e) {
-            this.error = 'Failed to load transformations: ' + e.message;
+            this.presetsError = 'Failed to load insight presets: ' + e.message;
             this.transformations = [];
         }
     },

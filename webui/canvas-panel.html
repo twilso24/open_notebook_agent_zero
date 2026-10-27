@@ -231,17 +231,6 @@
         <!-- ═══════ SOURCES TAB ═══════ -->
         <div x-show="&#36;store.openNotebookStore?.activeTab === 'sources'" class="on-scroll on-tab-pane--sources" style="display:none;flex:1;min-height:0">
 
-            <!-- Transformation Selector -->
-            <div x-show="&#36;store.openNotebookStore?.transformations?.length" style="padding:8px 12px">
-                <select style="width:100%;padding:6px 8px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-background);color:var(--color-text);font-size:0.85em"
-                        :value="&#36;store.openNotebookStore?.selectedTransformationId || ''"
-                        @change="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.selectedTransformationId = &#36;event.target.value)">
-                    <option value="" disabled>Select transformation…</option>
-                    <template x-for="t in (&#36;store.openNotebookStore?.transformations || [])" :key="t.id">
-                        <option :value="t.id" x-text="t.name + (t.apply_default ? ' ★' : '')"></option>
-                    </template>
-                </select>
-            </div>
 
             <!-- Import Button -->
             <div style="padding:4px 12px">
@@ -299,9 +288,31 @@
                         <span>Insights</span>
                         <button class="on-btn on-btn--ghost" @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.showSourceInsights = false, &#36;store.openNotebookStore.activeInsightSourceId = null)">✕</button>
                     </div>
+                    <div style="padding:8px 0;border-bottom:1px solid var(--color-border)">
+                        <div style="font-size:0.85em;font-weight:600;margin-bottom:4px">Create insight</div>
+                        <div x-show="!&#36;store.openNotebookStore?.transformations?.length" style="color:var(--color-text-muted);font-size:0.8em">No insight presets loaded.</div>
+                        <div x-show="&#36;store.openNotebookStore?.presetsError" style="color:var(--color-error-text);font-size:0.8em;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                            <span x-text="&#36;store.openNotebookStore?.presetsError"></span>
+                            <button class="on-btn on-btn--ghost" style="font-size:0.75em;padding:2px 8px" @click="&#36;store.openNotebookStore?.loadTransformations()">Retry</button>
+                        </div>
+                        <select style="width:100%;padding:6px 8px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-background);color:var(--color-text);font-size:0.85em"
+                                :value="&#36;store.openNotebookStore?.selectedPresetId || ''"
+                                @change="&#36;store.openNotebookStore && (&#36;store.openNotebookStore.selectedPresetId = &#36;event.target.value)">
+                            <option value="" disabled>Choose an insight preset…</option>
+                            <template x-for="t in (&#36;store.openNotebookStore?.transformations || [])" :key="t.id">
+                                <option :value="t.id" x-text="t.name + (t.apply_default ? ' ★' : '')"></option>
+                            </template>
+                        </select>
+                        <button class="on-btn on-btn--primary" style="width:100%;margin-top:6px"
+                                :disabled="!&#36;store.openNotebookStore?.selectedPresetId || &#36;store.openNotebookStore?.insightsLoading?.[&#36;store.openNotebookStore?.activeInsightSourceId]"
+                                @click="&#36;store.openNotebookStore?.createSourceInsight(&#36;store.openNotebookStore?.activeInsightSourceId, &#36;store.openNotebookStore?.selectedPresetId)">
+                            <span x-text="&#36;store.openNotebookStore?.insightsLoading?.[&#36;store.openNotebookStore?.activeInsightSourceId] ? 'Generating…' : 'Create insight'"></span>
+                        </button>
+                        <div x-show="&#36;store.openNotebookStore?.insightsError?.[&#36;store.openNotebookStore?.activeInsightSourceId]" style="color:var(--color-error-text);font-size:0.8em;margin-top:6px" x-text="&#36;store.openNotebookStore?.insightsError?.[&#36;store.openNotebookStore?.activeInsightSourceId]"></div>
+                    </div>
                     <template x-for="insight in (&#36;store.openNotebookStore?.sourceInsights || [])" :key="insight.id">
                         <div style="padding:8px 0;border-bottom:1px solid var(--color-border)">
-                            <div style="font-weight:600;font-size:0.9em" x-text="insight.title || insight.name || 'Insight'"></div>
+                            <div style="font-weight:600;font-size:0.9em" x-text="insight.insight_type || 'Insight'"></div>
                             <div style="font-size:0.85em;margin-top:4px" x-html="&#36;store.openNotebookStore?.md(insight.content || insight.text || '')"></div>
                             <div style="display:flex;gap:6px;margin-top:6px">
                                 <button class="on-btn on-btn--ghost" style="font-size:0.8em" @click="&#36;store.openNotebookStore?.saveInsightAsNote(insight.id)">💾 Save as Note</button>
@@ -376,7 +387,7 @@
                                 </template>
                                 <div style="display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid var(--color-border);padding-top:6px;margin-top:4px">
                                     <button class="on-btn on-btn--ghost" style="font-size:0.82em;padding:3px 8px" @click="&#36;store.openNotebookStore?.openSourceChat(&#36;store.openNotebookStore?.activeSourceDetailId)">💬 Chat</button>
-                                    <button class="on-btn on-btn--ghost" style="font-size:0.82em;padding:3px 8px" @click="&#36;store.openNotebookStore?.getSourceInsights(&#36;store.openNotebookStore?.activeSourceDetailId)">💡 Insights</button>
+                                    
                                     <button class="on-btn on-btn--ghost" style="font-size:0.82em;padding:3px 8px" @click="&#36;store.openNotebookStore?.sendSourceToChat(&#36;store.openNotebookStore?.activeSourceDetailId)">→ A0 Chat</button>
                                 </div>
                             </div>
@@ -424,8 +435,8 @@
                             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" x-text="source.title || source.name || 'Untitled'"></span>
                         </div>
                         <button class="on-btn on-btn--ghost" style="flex-shrink:0"
-                                @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'src-' + source.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
-                        <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'src-' + source.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
+                                @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'src-' + source.id, &#36;store.openNotebookStore._menuPos = {top: Math.max(8, Math.min(&#36;event.clientY, window.innerHeight - 240)), left: Math.max(8, &#36;event.clientX - 180)})">⋮</button>
+                        <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'src-' + source.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none" :style="{ top: (&#36;store.openNotebookStore?._menuPos?.top ?? 0) + 'px', left: (&#36;store.openNotebookStore?._menuPos?.left ?? 0) + 'px', position: 'fixed' }">
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.openSourceDetail(source.id); &#36;store.openNotebookStore._activeMenuId = null">📋 Details</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.openSourceChat(source.id); &#36;store.openNotebookStore._activeMenuId = null">💬 Chat</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.getSourceInsights(source.id); &#36;store.openNotebookStore._activeMenuId = null">💡 Insights</button>

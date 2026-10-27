@@ -194,6 +194,14 @@ function makeStore() {
     },
 
     async loadInsights(srcId) {
+      const main = (typeof window !== 'undefined' && window.Alpine && window.Alpine.store) ? window.Alpine.store('openNotebookStore') : null;
+      if (main && typeof main.loadInsights === 'function') {
+        await main.loadInsights(srcId);
+        if (main.insightCache && main.insightCache[srcId]) {
+          this.cache.insights[srcId] = main.insightCache[srcId];
+        }
+        return;
+      }
       if (this.cache.insights[srcId]) return;
       try {
         const data = await api('GET', '/api/sources/' + encodeURIComponent(srcId) + '/insights');

@@ -85,6 +85,7 @@ let _notebooksLoaded = false;
 // ── Simple Markdown → HTML ────────────────────────────
 function md(text) {
     if (!text) return '';
+    text = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return text
         .replace(/```([\s\S]*?)```/g, '<pre style="background:var(--color-code-bg,rgba(0,0,0,0.1));padding:8px;border-radius:4px;overflow-x:auto;font-size:0.85em;margin:4px 0"><code>$1</code></pre>')
         .replace(/`([^`]+)`/g, '<code style="background:var(--color-code-bg,rgba(0,0,0,0.1));padding:1px 4px;border-radius:3px;font-size:0.85em">$1</code>')
@@ -630,12 +631,13 @@ const model = {
             const resp = await smartFetch('/api/sources/' + encodeURIComponent(srcId) + '/insights');
             if (resp.ok) {
                 const data = await resp.json();
-                this.insightCache = { ...this.insightCache, [srcId]: Array.isArray(data) ? data : (data.data || []) };
+                const insights = Array.isArray(data) ? data : (data.data || []);
+                this.insightCache = { ...this.insightCache, [srcId]: insights };
             } else {
-                this.insightCache = { ...this.insightCache, [srcId]: [] };
+                this.insightsError = { ...this.insightsError, [srcId]: 'Failed to load insights: ' + resp.status };
             }
         } catch (e) {
-            this.insightCache = { ...this.insightCache, [srcId]: [] };
+            this.insightsError = { ...this.insightsError, [srcId]: e.message };
         }
     },
 
@@ -652,13 +654,12 @@ const model = {
         try {
             // Load existing insights only. Creation goes through createSourceInsight.
             const getResp = await smartFetch('/api/sources/' + sourceId + '/insights');
-            if (getResp.ok) {
-                const existing = await getResp.json();
-                if (Array.isArray(existing)) {
-                    this.sourceInsights = existing;
-                    // Mirror into the shared cache so v2 reads the same data.
-                    this.insightCache = { ...this.insightCache, [sourceId]: existing };
-                }
+            if (!getResp.ok) throw new Error('Failed to load insights: HTTP ' + getResp.status);
+            const existing = await getResp.json();
+            if (Array.isArray(existing)) {
+                if (this.activeInsightSourceId === sourceId) this.sourceInsights = existing;
+                // Mirror into the shared cache so v2 reads the same data.
+                this.insightCache = { ...this.insightCache, [sourceId]: existing };
             }
             this.showSourceInsights = true;
         } catch (e) {
@@ -680,6 +681,7 @@ const model = {
         this.insightsError = { ...this.insightsError, [sourceId]: null };
         this.activeInsightSourceId = sourceId;
         try {
+            const beforeIds = new Set((this.insightCache[sourceId] || []).map(i => i.id));
             const postResp = await smartFetch('/api/sources/' + sourceId + '/insights', {
                 method: 'POST',
                 body: JSON.stringify({ transformation_id: transformationId })
@@ -694,8 +696,9 @@ const model = {
                 const pollResp = await smartFetch('/api/sources/' + sourceId + '/insights');
                 if (pollResp.ok) {
                     const data = await pollResp.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        this.sourceInsights = data;
+                    const fresh = Array.isArray(data) ? data.filter(item => !beforeIds.has(item.id)) : [];
+                    if (fresh.length > 0) {
+                        if (this.activeInsightSourceId === sourceId) this.sourceInsights = data;
                         // Mirror into the shared cache so v2 reads the same data.
                         this.insightCache = { ...this.insightCache, [sourceId]: data };
                         found = true;

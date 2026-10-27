@@ -1,6 +1,6 @@
 # 🎙️ Open Notebook Plugin for Agent Zero
 
-> **Version: 0.5.0**
+> **Version: 0.5.1**
 
 > **Browse notebooks, manage sources, take notes, find content by name, and generate AI podcast episodes — all from the Agent Zero sidebar.**
 
@@ -302,6 +302,7 @@ Key milestones from the commit history:
 
 | Commit | Description |
 |--------|-------------|
+| `0.5.1` | Mobile tap targets and inline row menus; source insights panel; mobile preset dropdown; store consolidation and review fixes |
 | `0.5.0` | Grounded notebook chat from Agent Zero with no per-turn notebook LLM calls; chat input Notebooks context selector; `ask` no longer creates sessions |
 | `a0c5f22` | Fix: new sources default off and stay off; only explicit selections are grounded (empty config no longer means include-all); Insights button enables from `insights_count`; storage key v3 with legacy migration |
 | `audit-0.3.0` | **Audit fix: qualified imports, telemetry wiring, hooks.py, prompt action key, proxy config** |

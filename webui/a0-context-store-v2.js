@@ -202,6 +202,9 @@ function makeStore() {
         }
         return;
       }
+      // DEGRADED FALLBACK: when the canvas panel is closed (main store not loaded),
+      // v2 fetches insights directly. The main store is the single source of truth
+      // whenever it is loaded. This path should not be reached in normal use.
       if (this.cache.insights[srcId]) return;
       try {
         const data = await api('GET', '/api/sources/' + encodeURIComponent(srcId) + '/insights');

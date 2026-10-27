@@ -199,7 +199,7 @@
                                 <div class="on-card__meta" x-text="nb.description || nb.path || ''"></div>
                             </div>
                             <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
-                            @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = nb.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 160})">⋮</button>
+                            @click.stop="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = nb.id, &#36;store.openNotebookStore._menuPos = {top: Math.max(8, Math.min(&#36;event.target.getBoundingClientRect().bottom + 4, window.innerHeight - 240)), left: Math.max(8, &#36;event.target.getBoundingClientRect().left - 160)})">⋮</button>
                     <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === nb.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
                         <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.startRename(nb.id, nb.name)">Rename</button>
                         <button class="on-context-menu__item on-context-menu__item--danger" @click="&#36;store.openNotebookStore?.deleteNotebook(nb.id); &#36;store.openNotebookStore._activeMenuId=null">Delete</button>
@@ -434,7 +434,7 @@
                             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" x-text="source.title || source.name || 'Untitled'"></span>
                         </div>
                         <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
-                                @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'src-' + source.id, &#36;store.openNotebookStore._menuPos = {top: Math.max(8, Math.min(&#36;event.clientY, window.innerHeight - 240)), left: Math.max(8, &#36;event.clientX - 180)})">⋮</button>
+                                @click.stop="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'src-' + source.id, &#36;store.openNotebookStore._menuPos = {top: Math.max(8, Math.min(&#36;event.target.getBoundingClientRect().bottom + 4, window.innerHeight - 240)), left: Math.max(8, &#36;event.target.getBoundingClientRect().left - 180)})">⋮</button>
                         <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'src-' + source.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none" :style="{ top: (&#36;store.openNotebookStore?._menuPos?.top ?? 0) + 'px', left: (&#36;store.openNotebookStore?._menuPos?.left ?? 0) + 'px', position: 'fixed' }">
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.openSourceDetail(source.id); &#36;store.openNotebookStore._activeMenuId = null">📋 Details</button>
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.openSourceChat(source.id); &#36;store.openNotebookStore._activeMenuId = null">💬 Chat</button>
@@ -508,7 +508,7 @@
                                     <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" x-text="note.title || 'Untitled'"></div>
                                 </div>
                                 <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
-                                        @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'note-' + note.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
+                                        @click.stop="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'note-' + note.id, &#36;store.openNotebookStore._menuPos = {top: Math.max(8, Math.min(&#36;event.target.getBoundingClientRect().bottom + 4, window.innerHeight - 240)), left: Math.max(8, &#36;event.target.getBoundingClientRect().left - 180)})">⋮</button>
                             </div>
                             <div style="font-size:0.85em;color:var(--color-text-muted);margin-top:4px;max-height:120px;overflow-y:auto;padding-left:4px"
                                  x-html="&#36;store.openNotebookStore?.md(note.content || '')"></div>
@@ -543,7 +543,7 @@
                             <div class="on-card__meta" x-text="ep.created_at ? new Date(ep.created_at).toLocaleDateString() : ''"></div>
                         </div>
                         <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
-                                @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'ep-' + ep.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
+                                @click.stop="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'ep-' + ep.id, &#36;store.openNotebookStore._menuPos = {top: Math.max(8, Math.min(&#36;event.target.getBoundingClientRect().bottom + 4, window.innerHeight - 240)), left: Math.max(8, &#36;event.target.getBoundingClientRect().left - 180)})">⋮</button>
                         <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'ep-' + ep.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
                             <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.sendPodcastToChat(ep.id); &#36;store.openNotebookStore._activeMenuId = null">→ A0 Chat</button>
                             <button class="on-context-menu__item on-context-menu__item--danger" @click="if(confirm('Delete this episode?')){&#36;store.openNotebookStore?.deleteEpisode(ep.id)}; &#36;store.openNotebookStore._activeMenuId = null">🗑️ Delete</button>
@@ -587,7 +587,7 @@
                                         <div style="font-size:0.8em;color:var(--color-text-muted)" x-text="sess.created_at ? new Date(sess.created_at).toLocaleDateString() : ''"></div>
                                     </div>
                                     <button class="on-btn on-btn--ghost on-menu-trigger" style="flex-shrink:0"
-                                    @click="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'sess-' + sess.id, &#36;store.openNotebookStore._menuPos = {top: &#36;event.clientY, left: &#36;event.clientX - 180})">⋮</button>
+                                    @click.stop="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = 'sess-' + sess.id, &#36;store.openNotebookStore._menuPos = {top: Math.max(8, Math.min(&#36;event.target.getBoundingClientRect().bottom + 4, window.innerHeight - 240)), left: Math.max(8, &#36;event.target.getBoundingClientRect().left - 180)})">⋮</button>
                             <div class="on-context-menu" x-show="&#36;store.openNotebookStore?._activeMenuId === 'sess-' + sess.id" @click.away="&#36;store.openNotebookStore && (&#36;store.openNotebookStore._activeMenuId = null)" style="display:none">
                                 <button class="on-context-menu__item" @click="&#36;store.openNotebookStore?.startChatSessionRename(sess.id, sess.title)">Rename</button>
                                 <button class="on-context-menu__item on-context-menu__item--danger" @click="&#36;store.openNotebookStore?.deleteChatSession(sess.id); &#36;store.openNotebookStore._activeMenuId=null">🗑️ Delete</button>

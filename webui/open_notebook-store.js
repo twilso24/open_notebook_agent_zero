@@ -1618,17 +1618,34 @@ const model = {
             this._sendAsFile(msg);
             return;
         }
-        // Small content: directly update the DOM textarea
-        const inputStore = Alpine.store('inputStore');
-        if (inputStore) inputStore.message = msg;
-        const chatInput = document.getElementById('chat-input');
-        if (chatInput) {
-            chatInput.value = msg;
-            chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-            chatInput.focus();
-            chatInput.style.height = 'auto';
-            chatInput.style.height = chatInput.scrollHeight + 'px';
+        // Small content: write it into the core composer store. #chat-input is a
+        // contenteditable div driven by the 'chatInput' store, so a .value write
+        // and a synthetic input event would be erased by the store's editor sync.
+        this._setComposerText(msg);
+    },
+
+    _composerStore() {
+        try {
+            return (typeof Alpine !== 'undefined' && Alpine.store) ? Alpine.store('chatInput') : null;
+        } catch (_e) {
+            return null;
         }
+    },
+
+    _setComposerText(text) {
+        const composer = this._composerStore();
+        if (!composer) {
+            this._showToast('⚠️ Chat unavailable', 'Could not reach the A0 chat composer.');
+            return false;
+        }
+        composer.message = text;
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) chatInput.focus();
+        try {
+            if (typeof composer.adjustTextareaHeight === 'function') composer.adjustTextareaHeight();
+            if (typeof composer._setEditorCaret === 'function') composer._setEditorCaret(String(text || '').length);
+        } catch (_e) { /* caret/height are best-effort */ }
+        return true;
     },
 
     _sendAsFile(content) {
@@ -1653,24 +1670,13 @@ const model = {
                 displayInfo: { name: filename, size: file.size }
             });
             this._showToast('📎 Attached as file', filename);
-            // Add a prompt message in the chat input
-            const chatInput = document.getElementById('chat-input');
-            if (chatInput) {
-                chatInput.value = 'Review the attached file: ';
-                chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-                chatInput.focus();
-            }
+            // Add a prompt message in the chat input (composer store, not the DOM)
+            this._setComposerText('Review the attached file: ');
         } else {
-            // Fallback: write to uploads dir and put path in chat
-            console.warn('[OpenNotebook] chatAttachments store not found, using textarea fallback');
-            const chatInput = document.getElementById('chat-input');
-            if (chatInput) {
-                chatInput.value = content;
-                chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-                chatInput.focus();
-                chatInput.style.height = 'auto';
-                chatInput.style.height = chatInput.scrollHeight + 'px';
-            }
+            // Attachment store missing: put the content in the composer instead of
+            // dropping it via a .value write on the contenteditable editor.
+            console.warn('[OpenNotebook] chatAttachments store not found, using composer fallback');
+            this._setComposerText(content);
         }
     },
 

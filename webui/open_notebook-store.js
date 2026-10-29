@@ -117,7 +117,7 @@ const model = {
     notes: [],
     episodes: [],
     _activeMenuId: null,
-    _menuPos: { top: 0, right: 0 },
+    _menuPos: { top: 0, left: 0 },   // writers set {top,left}; consumed by canvas-panel :style binding
     _renamingId: null,
     _renameValue: '',
 
@@ -1622,6 +1622,151 @@ const model = {
         // contenteditable div driven by the 'chatInput' store, so a .value write
         // and a synthetic input event would be erased by the store's editor sync.
         this._setComposerText(msg);
+    },
+
+    // ── Row menu placement ────────────────────────────────
+    // Pure placement math: right-aligned to the trigger, flipping above when the
+    // menu cannot fit below, always clamped inside the viewport edges.
+    _computeMenuPos(triggerRect, menuSize, viewport, container) {
+        const EDGE = 8;
+        const GAP = 4;
+        const vw = Number(viewport && viewport.width) || 0;
+        const vh = Number(viewport && viewport.height) || 0;
+        const mw = Number(menuSize && menuSize.width) || 0;
+        const mh = Number(menuSize && menuSize.height) || 0;
+        const tTop = Number(triggerRect && triggerRect.top) || 0;
+        const tBottom = Number(triggerRect && triggerRect.bottom) || 0;
+        const tRight = Number(triggerRect && triggerRect.right) || 0;
+
+        // Usable vertical band: the viewport, narrowed by the clipping scroll pane
+        // the menu lives in. A menu clamped only to the window still gets cut off
+        // by that pane, which is what made the row beneath look covered.
+        let bandTop = EDGE;
+        let bandBottom = vh - EDGE;
+        if (container) {
+            const cTop = Number(container.top);
+            const cBottom = Number(container.bottom);
+            if (Number.isFinite(cTop)) bandTop = Math.max(bandTop, cTop + EDGE);
+            if (Number.isFinite(cBottom)) bandBottom = Math.min(bandBottom, cBottom - EDGE);
+        }
+        if (bandBottom - bandTop < mh) {
+            // The pane is too short for the menu at all; fall back to the window.
+            bandTop = EDGE;
+            bandBottom = vh - EDGE;
+        }
+
+        const fitsBelow = tBottom + GAP + mh <= bandBottom;
+        let top = fitsBelow ? tBottom + GAP : tTop - mh - GAP;
+        top = Math.max(bandTop, Math.min(top, bandBottom - mh));
+
+        let left = Math.min(tRight - mw, vw - EDGE - mw);
+        left = Math.max(EDGE, left);
+
+        return { top: Math.round(top), left: Math.round(left) };
+    },
+
+    _measureMenu(menuEl) {
+        if (!menuEl || !menuEl.getBoundingClientRect) return null;
+        let rect = menuEl.getBoundingClientRect();
+        if (rect && (rect.height || rect.width)) {
+            return { width: Math.round(rect.width), height: Math.round(rect.height) };
+        }
+        // Still display:none (Alpine has not painted it yet): render it off-screen
+        // for one synchronous read, then restore the previous inline style.
+        const previous = menuEl.getAttribute('style') || '';
+        try {
+            menuEl.setAttribute('style', previous.replace(/display\s*:\s*none;?/i, '') + ';display:block;visibility:hidden;position:fixed;top:-9999px;left:0;');
+            rect = menuEl.getBoundingClientRect();
+        } finally {
+            // Never leave the temporary off-screen style behind: a thrown layout
+            // read would otherwise keep the menu invisible and off-screen forever.
+            menuEl.setAttribute('style', previous);
+        }
+        if (!rect || (!rect.height && !rect.width)) return null;
+        return { width: Math.round(rect.width), height: Math.round(rect.height) };
+    },
+
+    // A transformed/filtered ancestor becomes the containing block for
+    // position:fixed, so its origin must be subtracted before the viewport
+    // coordinates from getBoundingClientRect() are applied.
+    _containingBlockOffset(el) {
+        const establishes = (cs) => {
+            if (!cs) return false;
+            if (cs.transform && cs.transform !== 'none') return true;
+            if (cs.filter && cs.filter !== 'none') return true;
+            if (cs.backdropFilter && cs.backdropFilter !== 'none') return true;
+            if (cs.webkitBackdropFilter && cs.webkitBackdropFilter !== 'none') return true;
+            if (cs.perspective && cs.perspective !== 'none') return true;
+            if (cs.willChange && cs.willChange !== 'auto' && /transform|filter|perspective/.test(cs.willChange)) return true;
+            if (cs.contain && cs.contain !== 'none' && /paint|layout|strict|content/.test(cs.contain)) return true;
+            return false;
+        };
+        let node = el;
+        while (node && node.nodeType !== 9) {
+            let cs = null;
+            try { cs = typeof getComputedStyle === 'function' ? getComputedStyle(node) : null; } catch (_e) { cs = null; }
+            if (establishes(cs)) {
+                const r = node.getBoundingClientRect ? node.getBoundingClientRect() : null;
+                return { top: r ? r.top : 0, left: r ? r.left : 0 };
+            }
+            node = node.parentElement;
+        }
+        return { top: 0, left: 0 };
+    },
+
+    _toLocalMenuPos(pos, offset) {
+        const top = Number(pos && pos.top) || 0;
+        const left = Number(pos && pos.left) || 0;
+        const dTop = Number(offset && offset.top) || 0;
+        const dLeft = Number(offset && offset.left) || 0;
+        return { top: Math.round(top - dTop), left: Math.round(left - dLeft) };
+    },
+
+    _findRowMenu(_menuKey, btn) {
+        if (!btn) return null;
+        // The trigger usually sits in a wrapper inside the row, so look at the
+        // immediate parent first and then fall back to the owning row. Without
+        // this the menu cannot be measured and never flips above.
+        const direct = btn.parentElement ? btn.parentElement.querySelector('.on-context-menu') : null;
+        if (direct) return direct;
+        const row = btn.closest ? btn.closest('.on-list-item') : null;
+        return row ? row.querySelector('.on-context-menu') : null;
+    },
+
+    _openRowMenu(menuKey, event) {
+        this._activeMenuId = menuKey;
+        this._menuOpenedAt = Date.now();
+        try {
+            const btn = (event && (event.currentTarget || event.target)) || null;
+            const rect = btn && btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
+            if (!rect) return;
+            const menuEl = this._findRowMenu(menuKey, btn);
+            const size = this._measureMenu(menuEl) || { width: 180, height: 0 };
+            // The list the menu lives in clips its overflow, so clamp to that pane
+            // as well as the window or the menu gets cut off above the next row.
+            const pane = btn.closest('.on-scroll') || menuEl?.closest?.('.on-scroll');
+            const paneRect = pane && pane.getBoundingClientRect ? pane.getBoundingClientRect() : null;
+            const container = paneRect ? { top: paneRect.top, bottom: paneRect.bottom } : null;
+            const viewportPos = this._computeMenuPos(rect, size, { width: window.innerWidth, height: window.innerHeight }, container);
+            // The panel's modal container carries a transform, which makes it the
+            // containing block for position:fixed. Without this shift the menu
+            // renders by the ancestor's own offset (measured ~102px too low).
+            const offset = this._containingBlockOffset(menuEl || btn);
+            this._menuPos = this._toLocalMenuPos(viewportPos, offset);
+        } catch (_e) { /* keep the menu usable even if measurement fails */ }
+    },
+
+    _closeRowMenu(event) {
+        // Decide by WHAT was clicked, never by elapsed time: a mobile tap can
+        // deliver its away-click hundreds of ms after the open, which a timing
+        // window would mistake for an outside click and close the menu at once.
+        const target = event && (event.target || (event.detail && event.detail.target));
+        if (target && typeof target.closest === 'function') {
+            if (target.closest('.on-context-menu')) return;   // inside the menu
+            if (target.closest('.on-menu-trigger')) return;   // the trigger that opened it
+        }
+        this._activeMenuId = null;
+        this._menuOpenedAt = 0;
     },
 
     _composerStore() {

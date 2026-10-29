@@ -1,6 +1,6 @@
 # 🎙️ Open Notebook Plugin for Agent Zero
 
-> **Version: 0.5.1**
+> **Version: 0.5.2**
 
 > **Browse notebooks, manage sources, take notes, find content by name, and generate AI podcast episodes — all from the Agent Zero sidebar.**
 
@@ -30,6 +30,7 @@ A knowledge management plugin that bridges [Open Notebook](https://github.com/lf
 - Collaborative note creation — say "note this down" and the agent composes the note from conversation context
 - Confirmation gates on destructive operations
 - Inline editing — edit note title and content from the ⋮ menu in the Notes tab
+- Row ⋮ menus (notes, sources, notebooks, episodes, sessions) anchor to their trigger: they open below when there is room and flip above when the row sits near the bottom, staying inside the scrolling list and the viewport on mobile
 
 ### Chat Context
 - Chat window context panel (Chat tab → **Context** button) controls what a notebook chat can see
@@ -302,6 +303,7 @@ Key milestones from the commit history:
 
 | Commit | Description |
 |--------|-------------|
+| `0.5.2` | Fix: row ⋮ menus lost their anchoring (transform-offset compensation) and were too low; menus now flip above the trigger and stay inside the clipping pane; mobile taps open menus again (store/panel version lockstep, target-based close guard, safe menu measuring) |
 | `0.5.1` | Mobile tap targets and inline row menus; source insights panel; mobile preset dropdown; store consolidation and review fixes |
 | `0.5.0` | Grounded notebook chat from Agent Zero with no per-turn notebook LLM calls; chat input Notebooks context selector; `ask` no longer creates sessions |
 | `a0c5f22` | Fix: new sources default off and stay off; only explicit selections are grounded (empty config no longer means include-all); Insights button enables from `insights_count`; storage key v3 with legacy migration |

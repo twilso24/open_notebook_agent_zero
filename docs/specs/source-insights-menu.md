@@ -109,15 +109,28 @@ Implemented in webui/open_notebook-store.js and webui/canvas-panel.html. The 'Cu
 - Loading and errors are per source (insightsLoading, insightsError).
 - Presets load when the Insights panel opens. A failed load shows presetsError with a Retry action (R4).
 - Insight rows label with insight_type (R6.1).
-- The row menu uses fixed positioning from _menuPos, clamped to the viewport (R5.2). Not yet checked at 390 px.
+- The row menu is anchored to its trigger through `_menuPos` with `position: fixed`, flipped above the row when there is no room below, and clamped to both the viewport and the clipping scroll pane (R5.2, R5.3 resolved by *using* `_menuPos`). Verified at 390 px.
 - The duplicate Insights button in source detail is removed (R5.4).
 
 Verification status:
 - node --check passes for the store. canvas-panel.html parses as HTML.
-- 8 contract tests in tests/test_source_insights_menu.py pass. These are string checks, not behavior tests.
-- Not yet done: live browser reproduction of the original bug, the create flow, and the 390 px menu check (AC5).
-- tests/ is in .gitignore, so the new test file is not tracked. Decide whether to change the ignore rule.
-- Nothing is committed.
+- 8 contract tests in tests/test_source_insights_menu.py pass.
+- tests/ is tracked (20 test files); the earlier note that it was gitignored was wrong and is withdrawn.
+- AC5 is closed: the row menu was checked at 390 px with a real pointer click, not a synthetic one.
+
+### Post-release defects found on a real phone (0.5.2)
+
+Three separate faults made the row menu open low, get clipped, or not open at all. Each had a failing test first.
+
+1. **Containing-block offset.** The core `.modal-inner` carries a `transform`, which makes it the containing block for `position: fixed`. Viewport coordinates were applied inside that box, so the menu rendered 102 px too low (computed `top: 621` drew at `723`). Fixed with `_containingBlockOffset()` / `_toLocalMenuPos()`.
+2. **Menu never measured, so it never flipped.** `_findRowMenu` looked on `btn.parentElement`, but the menu lives on `.on-list-item`. The height fell back to `0`, the flip-above never engaged, and the scroll pane's `overflow: hidden auto` clipped the lower items. Fixed by searching the row ancestor and by clamping to the pane as well as the viewport.
+3. **Version skew (mobile only).** The panel HTML was served versioned while it imported the store over an unversioned URL, and `sw.js` caches by exact request URL. A phone could run new panel HTML against a cached old store, where `_openRowMenu` did not exist: the tap threw, `_activeMenuId` was never set, and no menu appeared at all. Reproduced by shadowing `_openRowMenu` on a live page and clicking (no menu, `mutationCount: 0`). Both assets now move together, enforced by `tests/test_asset_versioning.py`.
+
+Two further fixes: the close guard is now target-based rather than a 250 ms window (mobile tap-to-click delay could close a menu the tap had just opened), and `_measureMenu` restores its temporary off-screen style in a `finally` block so a thrown layout read cannot leave the menu invisible.
+
+Tests: `tests/test_menu_placement.mjs` (20) and `tests/test_asset_versioning.py` (2) are behavior/contract tests; the pre-existing 8 string checks remain.
+
+Open follow-up: `webui/js/extensions.js:99` imports extension modules unversioned, so the script that supplies `modalPath` can itself come from cache and advertise a stale panel URL. The panel content is still correct in that case, but the URL is not a reliable identifier. Core-side change, tracked separately.
 
 ## Verification Plan
 

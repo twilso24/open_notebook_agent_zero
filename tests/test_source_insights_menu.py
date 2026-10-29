@@ -1,4 +1,4 @@
-"""Source menu and Insights contracts (spec: docs/specs/source-insights-menu.md)."""
+"""Source menu and Insights contracts."""
 
 import re
 from pathlib import Path
